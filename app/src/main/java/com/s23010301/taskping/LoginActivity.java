@@ -9,11 +9,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.util.Objects;
+
 public class LoginActivity extends AppCompatActivity {
 
     private EditText emailInput, passwordInput;
-    private MaterialButton btnLogin;
-    private TextView signUpLink, forgotPassword;
     private FirebaseAuth mAuth;
 
     @Override
@@ -29,15 +29,12 @@ public class LoginActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_login);
 
-        // Initialize Firebase Auth
-        mAuth = FirebaseAuth.getInstance();
-
         // Initialize views
         emailInput = findViewById(R.id.emailInput);
         passwordInput = findViewById(R.id.passwordInput);
-        btnLogin = findViewById(R.id.btnLogin);
-        signUpLink = findViewById(R.id.signUpLink);
-        forgotPassword = findViewById(R.id.forgotPassword); // optional
+        MaterialButton btnLogin = findViewById(R.id.btnLogin);
+        TextView signUpLink = findViewById(R.id.signUpLink);
+        TextView forgotPassword = findViewById(R.id.forgotPassword); // optional
 
         btnLogin.setOnClickListener(v -> handleLogin());
 
@@ -57,7 +54,7 @@ public class LoginActivity extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             Toast.makeText(this, "Reset link sent to your email", Toast.LENGTH_SHORT).show();
                         } else {
-                            Toast.makeText(this, "Error: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                            Toast.makeText(this, "Error: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_LONG).show();
                         }
                     });
         });
@@ -78,11 +75,15 @@ public class LoginActivity extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
                         // Navigate to Main/Dashboard
-                        startActivity(new Intent(LoginActivity.this, MainActivity.class));
-                        finish();
+                        goToDashboard();
                     } else {
-                        Toast.makeText(this, "Login failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Login failed: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
+    }
+    private void goToDashboard() {
+        Intent intent = new Intent(LoginActivity.this, MainActivity.class); // or DashboardActivity
+        startActivity(intent);
+        finish();
     }
 }

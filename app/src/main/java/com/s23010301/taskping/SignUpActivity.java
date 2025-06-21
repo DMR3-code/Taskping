@@ -10,11 +10,11 @@ import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import java.util.Objects;
+
 public class SignUpActivity extends AppCompatActivity {
 
     private EditText usernameInput, emailInput, passwordInput, confirmPasswordInput;
-    private MaterialButton btnRegister;
-    private ImageButton btnBack;
     private FirebaseAuth mAuth;
 
     @Override
@@ -29,8 +29,8 @@ public class SignUpActivity extends AppCompatActivity {
         emailInput = findViewById(R.id.emailInput);
         passwordInput = findViewById(R.id.passwordInput);
         confirmPasswordInput = findViewById(R.id.confirmPasswordInput);
-        btnRegister = findViewById(R.id.btnRegister);
-        btnBack = findViewById(R.id.btnBack);
+        MaterialButton btnRegister = findViewById(R.id.btnRegister);
+        ImageButton btnBack = findViewById(R.id.btnBack);
 
         // Back button click
         btnBack.setOnClickListener(v -> finish());
@@ -63,7 +63,7 @@ public class SignUpActivity extends AppCompatActivity {
                         startActivity(new Intent(this, LoginActivity.class));
                         finish();
                     } else {
-                        Toast.makeText(this, "Registration failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Registration failed: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
     }
