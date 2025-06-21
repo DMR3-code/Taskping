@@ -34,9 +34,8 @@
         <!-- Sign Up Activity -->
         <activity android:name=".SignUpActivity" />
 
-        <!-- Optional: MainActivity if used post-login -->
-        <activity android:name=".MainActivity"
-            android:exported="false" />
+        <!-- Main Activity (Home/Dashboard after login) -->
+        <activity android:name=".MainActivity" />
 
         <!-- Preloaded Fonts -->
         <meta-data

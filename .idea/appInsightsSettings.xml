@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.s23010301.taskping" />
+                  <option name="mobileSdkAppId" value="1:1007389286837:android:248e58cac25cd5665979fc" />
+                  <option name="projectId" value="taskping-74f55" />
+                  <option name="projectNumber" value="1007389286837" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
