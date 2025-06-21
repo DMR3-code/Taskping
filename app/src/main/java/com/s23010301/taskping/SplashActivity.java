@@ -16,9 +16,10 @@ public class SplashActivity extends AppCompatActivity {
         // Optional: set no layout if using theme-only splash
         // setContentView(R.layout.activity_splash);
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            startActivity(new Intent(SplashActivity.this, OnBoardingActivity.class));
+        new Handler().postDelayed(() -> {
+            Intent intent = new Intent(SplashActivity.this, OnBoardingActivity.class);
+            startActivity(intent);
             finish();
-        }, 2000); // 2 second delay
+        }, 3000);
     }
 }

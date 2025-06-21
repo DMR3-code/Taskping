@@ -17,6 +17,7 @@
             android:exported="false">
 
         </activity>
+        <activity android:name=".OnBoardingActivity" />
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -26,6 +27,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+
     </application>
 
 </manifest>

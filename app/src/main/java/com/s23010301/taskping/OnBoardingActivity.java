@@ -13,9 +13,9 @@ import java.util.ArrayList;
 public class OnBoardingActivity extends AppCompatActivity {
 
     private ViewPager2 viewPager;
-    private Button btnNext, btnSkip;
+    private Button btnNext;
+
     private LinearLayout dotsLayout;
-    private TextView[] dots;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,7 +24,7 @@ public class OnBoardingActivity extends AppCompatActivity {
 
         viewPager = findViewById(R.id.viewPager);
         btnNext = findViewById(R.id.btn_next);
-        btnSkip = findViewById(R.id.btn_skip);
+        TextView btnSkip = findViewById(R.id.btn_skip);
         dotsLayout = findViewById(R.id.layoutDots);
 
         List<OnBoardingItem> items = new ArrayList<>();
@@ -34,9 +34,6 @@ public class OnBoardingActivity extends AppCompatActivity {
 
         OnBoardingAdapter adapter = new OnBoardingAdapter(items);
         viewPager.setAdapter(adapter);
-
-        viewPager.setAdapter(adapter);
-
         addDots(0); // initial dot
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
@@ -58,7 +55,7 @@ public class OnBoardingActivity extends AppCompatActivity {
     }
 
     private void addDots(int position) {
-        dots = new TextView[3]; // 3 screens
+        TextView[] dots = new TextView[3]; // 3 screens
         dotsLayout.removeAllViews();
 
         for (int i = 0; i < dots.length; i++) {
