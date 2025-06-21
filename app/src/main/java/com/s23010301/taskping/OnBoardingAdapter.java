@@ -7,7 +7,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.util.List;
 
 public class OnBoardingAdapter extends RecyclerView.Adapter<OnBoardingAdapter.OnBoardingViewHolder> {
@@ -21,8 +20,10 @@ public class OnBoardingAdapter extends RecyclerView.Adapter<OnBoardingAdapter.On
     @NonNull
     @Override
     public OnBoardingViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new OnBoardingViewHolder(LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_onboarding, parent, false));
+        // Make sure the layout file name below matches the XML file you've actually saved.
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_onboarding, parent, false); // or R.layout.item_onboarding
+        return new OnBoardingViewHolder(view);
     }
 
     @Override
@@ -36,6 +37,7 @@ public class OnBoardingAdapter extends RecyclerView.Adapter<OnBoardingAdapter.On
     }
 
     static class OnBoardingViewHolder extends RecyclerView.ViewHolder {
+
         private final ImageView imageOnboarding;
         private final TextView textTitle;
         private final TextView textDescription;
