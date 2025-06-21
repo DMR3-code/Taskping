@@ -1,6 +1,7 @@
 package com.s23010301.taskping;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -13,18 +14,27 @@ import java.util.ArrayList;
 public class OnBoardingActivity extends AppCompatActivity {
 
     private ViewPager2 viewPager;
-    private Button btnNext, btnSkip;
+    private Button btnNext;
     private LinearLayout dotsLayout;
-    private TextView[] dots;
+
+    private static final String PREFS_NAME = "TaskPingPrefs";
+    private static final String KEY_ONBOARDING_COMPLETED = "onboarding_completed";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_onboarding);
 
+        // Skip if already completed onboarding
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)) {
+            startLogin();
+            return;
+        }
+
         viewPager = findViewById(R.id.viewPager);
         btnNext = findViewById(R.id.btn_next);
-        btnSkip = findViewById(R.id.btn_skip);
+        TextView btnSkip = findViewById(R.id.btn_skip);
         dotsLayout = findViewById(R.id.layoutDots);
 
         List<OnBoardingItem> items = new ArrayList<>();
@@ -34,10 +44,8 @@ public class OnBoardingActivity extends AppCompatActivity {
 
         OnBoardingAdapter adapter = new OnBoardingAdapter(items);
         viewPager.setAdapter(adapter);
-
-        viewPager.setAdapter(adapter);
-
         addDots(0); // initial dot
+
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
@@ -50,25 +58,30 @@ public class OnBoardingActivity extends AppCompatActivity {
             if (viewPager.getCurrentItem() < 2) {
                 viewPager.setCurrentItem(viewPager.getCurrentItem() + 1);
             } else {
-                startLogin();
+                completeOnboardingAndGoToLogin();
             }
         });
 
-        btnSkip.setOnClickListener(v -> startLogin());
+        btnSkip.setOnClickListener(v -> completeOnboardingAndGoToLogin());
     }
 
     private void addDots(int position) {
-        dots = new TextView[3]; // 3 screens
+        TextView[] dots = new TextView[3];
         dotsLayout.removeAllViews();
 
         for (int i = 0; i < dots.length; i++) {
             dots[i] = new TextView(this);
             dots[i].setText("●");
             dots[i].setTextSize(18);
-            dots[i].setTextColor(getResources().getColor(i == position ?
-                    R.color.blue : R.color.gray, getTheme()));
+            dots[i].setTextColor(getResources().getColor(i == position ? R.color.blue : R.color.gray, getTheme()));
             dotsLayout.addView(dots[i]);
         }
+    }
+
+    private void completeOnboardingAndGoToLogin() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).apply();
+        startLogin();
     }
 
     private void startLogin() {
