@@ -7,17 +7,22 @@ import android.widget.Toast;
 import android.widget.EditText;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 public class SignUpActivity extends AppCompatActivity {
 
     private EditText usernameInput, emailInput, passwordInput, confirmPasswordInput;
     private MaterialButton btnRegister;
     private ImageButton btnBack;
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
+
+        mAuth = FirebaseAuth.getInstance();
 
         // Find views
         usernameInput = findViewById(R.id.usernameInput);
@@ -50,11 +55,16 @@ public class SignUpActivity extends AppCompatActivity {
             return;
         }
 
-        // TODO: Replace with actual registration logic (API call, Firebase, etc.)
-        Toast.makeText(this, "Registered Successfully!", Toast.LENGTH_SHORT).show();
-
-        // Navigate to login or home
-        startActivity(new Intent(this, LoginActivity.class));
-        finish();
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        Toast.makeText(this, "Registered successfully!", Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(this, LoginActivity.class));
+                        finish();
+                    } else {
+                        Toast.makeText(this, "Registration failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 }
