@@ -1,11 +1,14 @@
 package com.s23010301.taskping;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.EditText;
-import android.widget.Toast;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 
@@ -19,22 +22,22 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mAuth = FirebaseAuth.getInstance();
-
-        // Auto-login if user is already signed in
-        if (mAuth.getCurrentUser() != null) {
-            startActivity(new Intent(LoginActivity.this, MainActivity.class));
-            finish();
-            return;
-        }
         setContentView(R.layout.activity_login);
 
-        // Initialize views
+        mAuth = FirebaseAuth.getInstance();
+
+        // Auto-login
+        if (mAuth.getCurrentUser() != null) {
+            goToDashboard();
+            return;
+        }
+
+        // Views
         emailInput = findViewById(R.id.emailInput);
         passwordInput = findViewById(R.id.passwordInput);
         MaterialButton btnLogin = findViewById(R.id.btnLogin);
         TextView signUpLink = findViewById(R.id.signUpLink);
-        TextView forgotPassword = findViewById(R.id.forgotPassword); // optional
+        TextView forgotPassword = findViewById(R.id.forgotPassword);
 
         btnLogin.setOnClickListener(v -> handleLogin());
 
@@ -58,8 +61,7 @@ public class LoginActivity extends AppCompatActivity {
                         }
                     });
         });
-
-        }
+    }
 
     private void handleLogin() {
         String email = emailInput.getText().toString().trim();
@@ -74,15 +76,19 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
-                        // Navigate to Main/Dashboard
                         goToDashboard();
                     } else {
                         Toast.makeText(this, "Login failed: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
     }
+
     private void goToDashboard() {
-        Intent intent = new Intent(LoginActivity.this, MainActivity.class); // or DashboardActivity
+        SharedPreferences prefs = getSharedPreferences("TaskPingPrefs", MODE_PRIVATE);
+        String username = prefs.getString("username", "User");
+
+        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+        intent.putExtra("username", username);
         startActivity(intent);
         finish();
     }

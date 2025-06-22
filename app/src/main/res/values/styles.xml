@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="RadioCheckboxTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="android:button">@drawable/custom_radio_checkbox</item>
+    </style>
+
+</resources>
