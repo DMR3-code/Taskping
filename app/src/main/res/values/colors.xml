@@ -4,5 +4,12 @@
     <color name="white">#FFFFFFFF</color>
     <color name="blue">#0062FF</color>
     <color name="gray">#B0B0B0</color>
+    <color name="nav_icon_color">#0062FF</color>
+    <color name="cardColor1">#FF6F61</color>
+    <color name="cardColor2">#6A1B9A</color>
+    <color name="cardColor3">#00897B</color>
+    <color name="cardColor4">#F9A825</color>
+    <color name="cardColor5">#00ACC1</color>
+
 
 </resources>
