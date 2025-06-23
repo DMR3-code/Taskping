@@ -10,6 +10,7 @@
     <color name="cardColor3">#00897B</color>
     <color name="cardColor4">#F9A825</color>
     <color name="cardColor5">#00ACC1</color>
+    <color name="gray_300">#E0E0E0</color>
 
 
 </resources>
