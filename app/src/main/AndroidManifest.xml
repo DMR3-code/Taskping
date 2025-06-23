@@ -36,6 +36,10 @@
 
         <!-- Main Activity  -->
         <activity android:name=".MainActivity" />
+        <activity android:name=".TaskListActivity" />
+        <activity android:name=".ProfileActivity" />
+        <activity android:name=".AddTaskActivity" />
+
 
         <!-- Preloaded Fonts -->
         <meta-data
