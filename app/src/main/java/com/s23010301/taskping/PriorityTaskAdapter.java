@@ -1,32 +1,33 @@
 package com.s23010301.taskping;
 
+import android.app.AlertDialog;
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+
 import java.util.List;
 import java.util.Random;
 
 public class PriorityTaskAdapter extends RecyclerView.Adapter<PriorityTaskAdapter.ViewHolder> {
-
     private final List<PriorityTask> taskList;
-    private final int[] colors = {
-            R.color.cardColor1,
-            R.color.cardColor2,
-            R.color.cardColor3,
-            R.color.cardColor4,
-            R.color.cardColor5
-    };
+    private final Context context;
+    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-    public PriorityTaskAdapter(List<PriorityTask> taskList) {
+    public PriorityTaskAdapter(Context context, List<PriorityTask> taskList) {
+        this.context = context;
         this.taskList = taskList;
     }
 
@@ -42,10 +43,9 @@ public class PriorityTaskAdapter extends RecyclerView.Adapter<PriorityTaskAdapte
             progressText = view.findViewById(R.id.taskProgressText);
             progressBar = view.findViewById(R.id.taskProgress);
             icon = view.findViewById(R.id.taskIcon);
-            cardView = view.findViewById(R.id.cardContainer); // ✅ proper reference
+            cardView = view.findViewById(R.id.cardContainer);
         }
     }
-
 
     @NonNull
     @Override
@@ -63,12 +63,43 @@ public class PriorityTaskAdapter extends RecyclerView.Adapter<PriorityTaskAdapte
         holder.progressText.setText(task.getProgress() + "%");
         holder.icon.setImageResource(task.getIconRes());
 
-        // 🔁 Assign consistent random color based on position
+        // Random card color
         Random random = new Random(holder.getLayoutPosition());
+        int[] colors = {
+                R.color.cardColor1, R.color.cardColor2,
+                R.color.cardColor3, R.color.cardColor4, R.color.cardColor5
+        };
         int colorResId = colors[random.nextInt(colors.length)];
         int color = ContextCompat.getColor(holder.itemView.getContext(), colorResId);
-
         holder.cardView.setCardBackgroundColor(color);
+
+        // 🔴 Long press to delete
+        holder.itemView.setOnLongClickListener(v -> {
+            new AlertDialog.Builder(context)
+                    .setTitle("Delete Task")
+                    .setMessage("Are you sure you want to delete this task?")
+                    .setPositiveButton("Yes", (dialog, which) -> {
+                        String title = task.getTitle(); // assuming title is unique
+                        db.collection("tasks")
+                                .whereEqualTo("title", title)
+                                .whereEqualTo("type", "priority")
+                                .get()
+                                .addOnSuccessListener(querySnapshot -> {
+                                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                                        db.collection("tasks").document(doc.getId()).delete();
+                                    }
+                                    taskList.remove(holder.getAdapterPosition());
+                                    notifyItemRemoved(holder.getAdapterPosition());
+                                    Toast.makeText(context, "Task deleted", Toast.LENGTH_SHORT).show();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Toast.makeText(context, "Failed to delete: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                });
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            return true;
+        });
     }
 
     @Override

@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.FirebaseFirestore;
-
+import com.google.firebase.firestore.FieldValue;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -81,6 +81,7 @@ public class AddTaskActivity extends AppCompatActivity {
         taskData.put("startDate", start);
         taskData.put("endDate", end);
         taskData.put("done", false);
+        taskData.put("createdAt", FieldValue.serverTimestamp());
 
         db.collection("tasks")
                 .document(taskId)
