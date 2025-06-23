@@ -73,7 +73,7 @@ public class PriorityTaskAdapter extends RecyclerView.Adapter<PriorityTaskAdapte
         int color = ContextCompat.getColor(holder.itemView.getContext(), colorResId);
         holder.cardView.setCardBackgroundColor(color);
 
-        // 🔴 Long press to delete
+
         holder.itemView.setOnLongClickListener(v -> {
             new AlertDialog.Builder(context)
                     .setTitle("Delete Task")

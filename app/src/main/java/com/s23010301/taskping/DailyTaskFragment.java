@@ -35,21 +35,36 @@ public class DailyTaskFragment extends Fragment {
     }
 
     private void fetchDailyTasks() {
+        String selectedDate = DateSelectionHelper.getSelectedDate();
+        if (selectedDate == null) return;
+
         db.collection("tasks")
                 .whereEqualTo("type", "daily")
+                .whereEqualTo("startDate", selectedDate)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<DailyTask> dailyList = new ArrayList<>();
                     for (QueryDocumentSnapshot doc : querySnapshot) {
                         String title = doc.getString("title");
                         boolean done = Boolean.TRUE.equals(doc.getBoolean("done"));
-                        boolean hasLocation = doc.contains("location"); // optional
+                        boolean hasLocation = doc.contains("location");
                         dailyList.add(new DailyTask(title, done, hasLocation));
                     }
-                    adapter = new DailyTaskAdapter(requireContext(),dailyList);
+                    adapter = new DailyTaskAdapter(requireContext(), dailyList);
                     dailyRecyclerView.setAdapter(adapter);
                 })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Failed to load daily tasks Frag", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e ->
+                        Toast.makeText(getContext(), "Failed to load daily tasks", Toast.LENGTH_SHORT).show()
+                );
+    }
+
+    public void refreshTasks() {
+        fetchDailyTasks();
+    }
+    @Override
+    public void onResume() {
+        super.onResume();
+        fetchDailyTasks();
     }
 
 }

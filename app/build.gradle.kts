@@ -47,4 +47,8 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation (libs.viewpager2)
     implementation (libs.firebase.firestore)
+    implementation (libs.play.services.maps)
+    implementation (libs.play.services.location)
+    implementation (libs.google.places)
+
 }
