@@ -2,12 +2,14 @@ package com.s23010301.taskping;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.fragment.app.Fragment;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -15,13 +17,11 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 public class TaskListActivity extends AppCompatActivity {
 
@@ -44,45 +44,81 @@ public class TaskListActivity extends AppCompatActivity {
         String currentMonth = new SimpleDateFormat("MMMM, yyyy", Locale.getDefault()).format(new Date());
         monthText.setText(currentMonth);
 
-        // Setup ViewPager with Adapter
-        TaskPagerAdapter  pagerAdapter = new TaskPagerAdapter (this);
+        // Setup ViewPager
+        TaskPagerAdapter pagerAdapter = new TaskPagerAdapter(this);
         viewPager.setAdapter(pagerAdapter);
 
-        // Attach TabLayout with ViewPager2
+        // Attach tabs
         new TabLayoutMediator(tabLayout, viewPager,
                 (tab, position) -> tab.setText(tabTitles[position])
         ).attach();
 
-        // Handle Add Task button
+        // Date Strip
+        generateDateStrip();
+
+        // Add Task Button
         btnAddTask.setOnClickListener(view -> {
             startActivity(new Intent(TaskListActivity.this, AddTaskActivity.class));
         });
 
+        // Bottom Nav
         BottomNavigationView bottomNav = findViewById(R.id.bottomNavigation);
         NavigationHelper.setupBottomNavigation(bottomNav, this);
     }
-    private void fetchTasksFromFirestore() {
-        db.collection("tasks")
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    List<DailyTask> dailyList = new ArrayList<>();
-                    List<PriorityTask> priorityList = new ArrayList<>();
 
-                    for (QueryDocumentSnapshot doc : querySnapshot) {
-                        String title = doc.getString("title");
-                        String type = doc.getString("type");
-                        boolean done = Boolean.TRUE.equals(doc.getBoolean("done"));
+    private void generateDateStrip() {
+        LinearLayout dateContainer = findViewById(R.id.dateContainer);
+        dateContainer.removeAllViews();
 
-                        if ("daily".equals(type)) {
-                            boolean hasLocation = doc.contains("location"); // Optional
-                            dailyList.add(new DailyTask(title, done, hasLocation));
-                        } else {
-                            priorityList.add(new PriorityTask(title, 0, 0, R.drawable.ic_location));
-                        }
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Failed to load tasks", Toast.LENGTH_SHORT).show();
-                });
+        Calendar today = Calendar.getInstance();
+        SimpleDateFormat dayFormat = new SimpleDateFormat("EEE", Locale.getDefault());
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd", Locale.getDefault());
+        SimpleDateFormat fullFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
+
+        int totalDays = 7;
+
+        for (int i = 0; i < totalDays; i++) {
+            Calendar day = (Calendar) today.clone();
+            day.add(Calendar.DATE, i);
+
+            String displayText = dayFormat.format(day.getTime()) + "\n" + dateFormat.format(day.getTime());
+            String fullDateStr = fullFormat.format(day.getTime());
+
+            MaterialButton btn = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            btn.setText(displayText);
+            btn.setTag(fullDateStr);
+            btn.setTextSize(12);
+            btn.setAllCaps(false);
+            btn.setPadding(24, 24, 24, 24);
+            btn.setBackgroundResource(R.drawable.date_button_selector);
+            btn.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            btn.setStrokeWidth(0);
+
+            if (i == 0) {
+                btn.setSelected(true);
+                DateSelectionHelper.setSelectedDate(fullDateStr);
+            }
+
+            btn.setOnClickListener(v -> {
+                for (int j = 0; j < dateContainer.getChildCount(); j++) {
+                    dateContainer.getChildAt(j).setSelected(false);
+                }
+                v.setSelected(true);
+                String selectedDate = (String) v.getTag();
+                DateSelectionHelper.setSelectedDate(selectedDate);
+
+                // Trigger fragment refresh
+                ViewPager2 viewPager = findViewById(R.id.viewPager);
+                int currentTab = viewPager.getCurrentItem();
+                Fragment currentFragment = getSupportFragmentManager().findFragmentByTag("f" + currentTab);
+                if (currentFragment instanceof DailyTaskFragment) {
+                    ((DailyTaskFragment) currentFragment).refreshTasks();
+                } else if (currentFragment instanceof PriorityTaskFragment) {
+                    ((PriorityTaskFragment) currentFragment).refreshTasks();
+                }
+            });
+
+            dateContainer.addView(btn);
+        }
     }
 }

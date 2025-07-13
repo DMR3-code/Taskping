@@ -50,4 +50,7 @@ public class PriorityTaskFragment extends Fragment {
                 })
                 .addOnFailureListener(e -> Toast.makeText(getContext(), "Failed to load priority tasks", Toast.LENGTH_SHORT).show());
     }
+    public void refreshTasks() {
+        fetchPriorityTasks();
+    }
 }
