@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="RadioCheckboxTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="android:button">@drawable/custom_radio_checkbox</item>
+    </style>
+    <style name="BottomNavigationStyle" parent="Widget.Design.BottomNavigationView">
+        <item name="android:layout_height">56dp</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="itemIconTint">@color/nav_icon_color</item>
+        <item name="itemTextColor">@color/nav_icon_color</item>
+        <item name="itemBackground">?android:attr/selectableItemBackground</item>
+        <item name="elevation">8dp</item>
+        <item name="labelVisibilityMode">labeled</item>
+    </style>
+
+</resources>
