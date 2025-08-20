@@ -18,6 +18,7 @@ import com.s23010301.taskping.db.TaskRepository;
 import com.s23010301.taskping.models.PriorityTask;
 import com.s23010301.taskping.models.Task;
 import com.s23010301.taskping.models.DateViewModel;
+import com.s23010301.taskping.models.TaskViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,7 @@ public class PriorityTaskFragment extends Fragment {
 
     private final List<PriorityTask> priorityTasks = new ArrayList<>();
     private PriorityTaskAdapter adapter;
-    private TaskRepository repository;
+    private TaskViewModel taskViewModel;
 
     @Nullable
     @Override
@@ -40,7 +41,8 @@ public class PriorityTaskFragment extends Fragment {
         adapter = new PriorityTaskAdapter(getContext(), priorityTasks);
         priorityRecyclerView.setAdapter(adapter);
 
-        repository = new TaskRepository(requireActivity());
+        taskViewModel = new ViewModelProvider(requireActivity()).get(TaskViewModel.class);
+        adapter.setViewModel(taskViewModel);
 
         DateViewModel dateViewModel = new ViewModelProvider(requireActivity()).get(DateViewModel.class);
         dateViewModel.getDate().observe(getViewLifecycleOwner(), this::loadTasksForDate);
@@ -51,7 +53,7 @@ public class PriorityTaskFragment extends Fragment {
     private void loadTasksForDate(String date) {
         if (date == null) return;
 
-        repository.getTasksByDate(date).observe(getViewLifecycleOwner(), tasks -> {
+        taskViewModel.getTasksByDate(date).observe(getViewLifecycleOwner(), tasks -> {
             priorityTasks.clear();
             for (Task task : tasks) {
                 if ("priority".equals(task.getType())) {
@@ -61,6 +63,6 @@ public class PriorityTaskFragment extends Fragment {
             adapter.notifyDataSetChanged();
         });
 
-        repository.refreshTasksFromFirestore("priority", date);
+        taskViewModel.refreshTasksFromFirestore("priority", date);
     }
 }

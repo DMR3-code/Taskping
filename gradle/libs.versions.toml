@@ -1,5 +1,5 @@
 [versions]
-agp = "8.12.0"
+agp = "8.12.1"
 firebaseAuth = "24.0.0"
 firebaseBom = "34.0.0"
 junit = "4.13.2"

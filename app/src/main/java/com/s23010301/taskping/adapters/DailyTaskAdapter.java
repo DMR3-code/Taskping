@@ -21,12 +21,18 @@ import com.s23010301.taskping.helpers.LocalCacheHelper;
 import com.s23010301.taskping.models.DailyTask;
 import com.s23010301.taskping.helpers.FirestoreHelper;
 import com.s23010301.taskping.models.TaskReminderReceiver;
+import com.s23010301.taskping.models.TaskViewModel;
 
 import java.util.List;
 
 public class DailyTaskAdapter extends RecyclerView.Adapter<DailyTaskAdapter.TaskViewHolder> {
     private final Context context;
     private final List<DailyTask> taskList;
+    private TaskViewModel viewModel;
+
+    public void setViewModel(TaskViewModel viewModel) {
+        this.viewModel = viewModel;
+    }
 
     public DailyTaskAdapter(Context context, List<DailyTask> taskList) {
         this.context = context;
@@ -51,20 +57,9 @@ public class DailyTaskAdapter extends RecyclerView.Adapter<DailyTaskAdapter.Task
         });
 
         holder.itemView.setOnClickListener(v -> {
-            LocalCacheHelper cache = LocalCacheHelper.getInstance((FragmentActivity) context);
-            cache.getTaskById(task.getId()).observe((FragmentActivity) context, fullTask -> {
-                if (fullTask != null) {
-                    Intent intent = new Intent(context, TaskDetailsActivity.class);
-                    intent.putExtra("title", fullTask.getTitle());
-                    intent.putExtra("description", fullTask.getDescription());
-                    intent.putExtra("endDate", fullTask.getEndDate());
-                    intent.putExtra("hasLocation", fullTask.hasLocation());
-                    intent.putExtra("location", fullTask.getLocation());
-                    context.startActivity(intent);
-                } else {
-                    Toast.makeText(context, "Task data not found", Toast.LENGTH_SHORT).show();
-                }
-            });
+            if (viewModel != null) {
+                viewModel.onTaskClicked(task.getId());
+            }
         });
 
     }

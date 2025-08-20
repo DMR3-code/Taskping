@@ -36,8 +36,6 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                                     AppDatabase.class, "taskping-db")
-                            //.addMigrations(MIGRATION_1_2) // comment this and use fallbackToDestructiveMigration() only during testing
-                            .fallbackToDestructiveMigration()
                             .build();
                 }
             }

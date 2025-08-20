@@ -28,5 +28,8 @@ public interface TaskDao {
     @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
     LiveData<Task> getTaskById(String id);
 
+    @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
+    Task getTaskByIdSync(String id);
+
 
 }

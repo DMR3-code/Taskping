@@ -1,10 +1,12 @@
 package com.s23010301.taskping.activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -15,6 +17,7 @@ import com.s23010301.taskping.db.TaskRepository;
 import com.s23010301.taskping.models.DailyTask;
 import com.s23010301.taskping.models.PriorityTask;
 import com.s23010301.taskping.models.Task;
+import com.s23010301.taskping.models.TaskViewModel;
 import com.s23010301.taskping.utils.DateUtils;
 
 import java.util.ArrayList;
@@ -26,6 +29,7 @@ public class MainActivity extends BaseActivity {
     private final List<PriorityTask> priorityTasks = new ArrayList<>();
     private final List<DailyTask> dailyTasks = new ArrayList<>();
     private TaskRepository repository;
+    private TaskViewModel taskViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +39,7 @@ public class MainActivity extends BaseActivity {
         FrameLayout container = findViewById(R.id.content_container);
         ViewGroup mainContent = (ViewGroup) getLayoutInflater()
                 .inflate(R.layout.activity_main_content, container);
+        taskViewModel = new ViewModelProvider(this).get(TaskViewModel.class);
 
         TextView todayDate = mainContent.findViewById(R.id.todayDate);
         TextView welcomeText = mainContent.findViewById(R.id.welcomeText);
@@ -60,12 +65,33 @@ public class MainActivity extends BaseActivity {
         dailyRecyclerView.setAdapter(dailyAdapter);
 
         repository = new TaskRepository(this);
+
+        setupNavigationObserver();
+    }
+
+    private void setupNavigationObserver() {
+        taskViewModel.navigateToTaskDetails().observe(this, event -> {
+            Task task = event.getContentIfNotHandled();
+            if (task != null) {
+                // This is your navigation logic
+                Intent intent = new Intent(this, TaskDetailsActivity.class);
+                intent.putExtra("title", task.getTitle());
+                intent.putExtra("description", task.getDescription());
+                intent.putExtra("endDate", task.getEndDate());
+                intent.putExtra("hasLocation", task.hasLocation());
+                intent.putExtra("location", task.getLocation());
+                startActivity(intent);
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         String today = DateUtils.getCurrentDate("MMM dd, yyyy");
+
+        priorityAdapter.setViewModel(taskViewModel);
+        dailyAdapter.setViewModel(taskViewModel);
 
         repository.getTasksByDate(today).observe(this, tasks -> {
             priorityTasks.clear();

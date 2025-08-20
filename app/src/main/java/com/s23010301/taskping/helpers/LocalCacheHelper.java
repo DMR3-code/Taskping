@@ -21,8 +21,9 @@ public class LocalCacheHelper {
                 .build();
     }
 
-    public static synchronized LocalCacheHelper getInstance(FragmentActivity context) {
+    public static synchronized LocalCacheHelper getInstance(Context context) {
         if (instance == null) {
+            // This line is already correct, as it uses the application context
             instance = new LocalCacheHelper(context.getApplicationContext());
         }
         return instance;
@@ -41,6 +42,8 @@ public class LocalCacheHelper {
     public LiveData<Task> getTaskById(String id) {
         return db.taskDao().getTaskById(id);
     }
-
+    public Task getTaskByIdSync(String id) {
+        return db.taskDao().getTaskByIdSync(id);
+    }
 
 }

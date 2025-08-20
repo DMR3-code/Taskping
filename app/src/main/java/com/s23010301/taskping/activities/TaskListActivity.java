@@ -16,6 +16,8 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.s23010301.taskping.R;
 import com.s23010301.taskping.adapters.TaskPagerAdapter;
+import com.s23010301.taskping.models.Task;
+import com.s23010301.taskping.models.TaskViewModel;
 import com.s23010301.taskping.utils.DateUtils;
 import com.s23010301.taskping.models.DateViewModel;
 
@@ -27,6 +29,7 @@ import java.util.Locale;
 public class TaskListActivity extends BaseActivity {
     private final String[] tabTitles = new String[]{"Priority Task", "Daily Task"};
     private DateViewModel dateViewModel;
+    private TaskViewModel taskViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +40,9 @@ public class TaskListActivity extends BaseActivity {
         ViewGroup taskListContent = (ViewGroup) getLayoutInflater()
                 .inflate(R.layout.activity_task_list_content, container);
 
+        taskViewModel = new ViewModelProvider(this).get(TaskViewModel.class);
+        dateViewModel = new ViewModelProvider(this).get(DateViewModel.class);
+
         TabLayout tabLayout = taskListContent.findViewById(R.id.tabLayout);
         ViewPager2 viewPager = taskListContent.findViewById(R.id.viewPager);
         TextView monthText = taskListContent.findViewById(R.id.monthText);
@@ -45,8 +51,6 @@ public class TaskListActivity extends BaseActivity {
 
         monthText.setText(DateUtils.getCurrentDate("MMMM, yyyy"));
 
-        // Initialize ViewModel and today's date
-        dateViewModel = new ViewModelProvider(this).get(DateViewModel.class);
         String today = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(new Date());
         if (dateViewModel.getDate().getValue() == null) {
             dateViewModel.setDate(today);
@@ -61,8 +65,25 @@ public class TaskListActivity extends BaseActivity {
 
         generateDateStrip(dateContainer);
         btnAddTask.setOnClickListener(v -> startActivity(new Intent(this, AddTaskActivity.class)));
+
+        setupNavigationObserver();
+
     }
 
+    private void setupNavigationObserver() {
+        taskViewModel.navigateToTaskDetails().observe(this, event -> {
+            Task task = event.getContentIfNotHandled();
+            if (task != null) {
+                Intent intent = new Intent(this, TaskDetailsActivity.class);
+                intent.putExtra("title", task.getTitle());
+                intent.putExtra("description", task.getDescription());
+                intent.putExtra("endDate", task.getEndDate());
+                intent.putExtra("hasLocation", task.hasLocation());
+                intent.putExtra("location", task.getLocation());
+                startActivity(intent);
+            }
+        });
+    }
     @Override
     protected int getCurrentNavItem() {
         return R.id.nav_tasks;

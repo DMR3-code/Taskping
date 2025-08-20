@@ -18,6 +18,7 @@ import com.s23010301.taskping.db.TaskRepository;
 import com.s23010301.taskping.models.DailyTask;
 import com.s23010301.taskping.models.Task;
 import com.s23010301.taskping.models.DateViewModel;
+import com.s23010301.taskping.models.TaskViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,7 @@ public class DailyTaskFragment extends Fragment {
 
     private final List<DailyTask> dailyTasks = new ArrayList<>();
     private DailyTaskAdapter adapter;
-    private TaskRepository repository;
+    private TaskViewModel taskViewModel;
 
     @Nullable
     @Override
@@ -40,7 +41,8 @@ public class DailyTaskFragment extends Fragment {
         adapter = new DailyTaskAdapter(requireContext(), dailyTasks);
         dailyRecyclerView.setAdapter(adapter);
 
-        repository = new TaskRepository(requireActivity());
+        taskViewModel = new ViewModelProvider(requireActivity()).get(TaskViewModel.class);
+        adapter.setViewModel(taskViewModel);
 
         DateViewModel dateViewModel = new ViewModelProvider(requireActivity()).get(DateViewModel.class);
         dateViewModel.getDate().observe(getViewLifecycleOwner(), this::loadTasksForDate);
@@ -51,7 +53,7 @@ public class DailyTaskFragment extends Fragment {
     private void loadTasksForDate(String date) {
         if (date == null) return;
 
-        repository.getTasksByDate(date).observe(getViewLifecycleOwner(), tasks -> {
+        taskViewModel.getTasksByDate(date).observe(getViewLifecycleOwner(), tasks -> {
             dailyTasks.clear();
             for (Task task : tasks) {
                 if ("daily".equals(task.getType())) {
@@ -61,6 +63,6 @@ public class DailyTaskFragment extends Fragment {
             adapter.notifyDataSetChanged();
         });
 
-        repository.refreshTasksFromFirestore("daily", date);
+        taskViewModel.refreshTasksFromFirestore("daily", date);
     }
 }

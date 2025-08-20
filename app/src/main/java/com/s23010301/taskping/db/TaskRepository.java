@@ -18,13 +18,18 @@ public class TaskRepository {
     private final LocalCacheHelper cache;
     private final FirebaseFirestore db;
 
-    public TaskRepository(FragmentActivity activity) {
-        this.cache = LocalCacheHelper.getInstance(activity);
+    public TaskRepository(Context context) {
+        // This call now works perfectly because getInstance accepts a Context
+        this.cache = LocalCacheHelper.getInstance(context);
         this.db = FirebaseFirestore.getInstance();
     }
 
     public LiveData<List<Task>> getTasksByDate(String date) {
         return cache.getTasksByDate(date);
+    }
+
+    public Task getTaskByIdSync(String id) {
+        return cache.getTaskByIdSync(id);
     }
 
     public void refreshTasksFromFirestore(String type, String date) {
