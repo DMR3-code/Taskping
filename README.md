@@ -2,7 +2,6 @@
 **Smart Task Management with Location-Based Reminders**
 
 ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
-![Kotlin](https://img.shields.io/badge/Kotlin-0095D5?style=for-the-badge&logo=kotlin&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white)
 ![Google Maps](https://img.shields.io/badge/Google_Maps-4285F4?style=for-the-badge&logo=google-maps&logoColor=white)
 
@@ -211,6 +210,7 @@ service cloud.firestore {
 ### TaskPing - Never forget what matters, wherever you are! 🎯📍
 
 ---
+
 
 
 
