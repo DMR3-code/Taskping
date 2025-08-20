@@ -55,12 +55,29 @@
                     android:textColor="#888888" />
             </LinearLayout>
 
-            <ImageView
-                android:id="@+id/btnNotification"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_notification"
-                android:contentDescription="Notification" />
+            <RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <ImageView
+                    android:id="@+id/btnNotification"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_notification"
+                    android:contentDescription="Notification" />
+
+                <TextView
+                    android:id="@+id/notificationBadge"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_alignTop="@id/btnNotification"
+                    android:layout_alignEnd="@id/btnNotification"
+                    android:background="@drawable/bg_notification_badge"
+                    android:textColor="@android:color/white"
+                    android:textSize="10sp"
+                    android:gravity="center"
+                    android:visibility="gone"/>
+            </RelativeLayout>
         </LinearLayout>
 
         <!-- My Priority Task -->

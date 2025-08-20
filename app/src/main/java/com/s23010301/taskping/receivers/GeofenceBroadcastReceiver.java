@@ -1,4 +1,4 @@
-package com.s23010301.taskping.models;
+package com.s23010301.taskping.receivers;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -6,15 +6,12 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.google.android.gms.location.Geofence;
-import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingEvent;
-import com.google.android.gms.location.LocationServices;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.s23010301.taskping.helpers.NotificationHelper;
+import com.s23010301.taskping.db.NotificationRepository;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 public class GeofenceBroadcastReceiver extends BroadcastReceiver {
     private static final String TAG = "GeofenceReceiver";
@@ -22,9 +19,6 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
-
-        // Get the specific geofence ID if available
-        String geofenceId = intent.getStringExtra("geofence_id");
 
         if (geofencingEvent != null && geofencingEvent.hasError()) {
             Log.e(TAG, "Geofencing Error: " + geofencingEvent.getErrorCode());
@@ -53,13 +47,29 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver {
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         String title = documentSnapshot.getString("title");
+                        String description = documentSnapshot.getString("description");
 
                         if (title != null && !title.isEmpty()) {
-                            String notificationMessage = "Remember: " + title;
-                            // Show the specific notification
-                            NotificationHelper.showNotification(context, "Task Nearby", notificationMessage);
-                        }
+                            String notificationMessage = "You're near the location for: " + title;
 
+                            // 1. Show system notification
+                            NotificationHelper.showNotification(
+                                    context,
+                                    "Task Nearby",
+                                    notificationMessage,
+                                    "geofence_" + taskId,
+                                    taskId
+                            );
+
+                            // 2. Store in database
+                            NotificationRepository repository = new NotificationRepository(context);
+                            repository.addNotification(
+                                    "Location Reminder: " + title,
+                                    notificationMessage,
+                                    "location_reminder",
+                                    taskId
+                            );
+                        }
                     } else {
                         Log.w(TAG, "Task document not found for ID: " + taskId);
                     }

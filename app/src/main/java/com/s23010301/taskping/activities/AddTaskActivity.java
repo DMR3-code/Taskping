@@ -36,7 +36,7 @@ import com.s23010301.taskping.R;
 import com.s23010301.taskping.helpers.GeofenceHelper;
 import com.s23010301.taskping.helpers.LocalCacheHelper;
 import com.s23010301.taskping.models.Task;
-import com.s23010301.taskping.models.TaskReminderReceiver;
+import com.s23010301.taskping.receivers.TaskReminderReceiver;
 import com.s23010301.taskping.utils.DateUtils;
 import com.s23010301.taskping.helpers.FirestoreHelper;
 
@@ -63,8 +63,6 @@ public class AddTaskActivity extends AppCompatActivity {
     private final Calendar calendarStart = Calendar.getInstance();
     private final Calendar calendarEnd = Calendar.getInstance();
     private ActivityResultLauncher<Intent> locationPickerLauncher;
-
-    // Add retry mechanism for geofencing
     private static final int MAX_GEOFENCE_RETRIES = 3;
     private int geofenceRetryCount = 0;
 
@@ -208,18 +206,21 @@ public class AddTaskActivity extends AppCompatActivity {
             SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
             reminderTime.setTime(sdf.parse(dateStr));
 
-            // Set reminder for 9 AM on task date
-            reminderTime.set(Calendar.HOUR_OF_DAY, 9);
+            // Set reminder for 7 AM on task date
+            reminderTime.set(Calendar.HOUR_OF_DAY, 7);
             reminderTime.set(Calendar.MINUTE, 0);
             reminderTime.set(Calendar.SECOND, 0);
 
             TaskReminderReceiver.scheduleReminder(
                     this,
-                    taskId,
+                    taskId, // Pass task ID
                     title,
                     description,
                     reminderTime
             );
+
+            Log.d("AddTaskActivity", "Reminder scheduled for task: " + title);
+
         } catch (ParseException e) {
             Log.e("AddTaskActivity", "Error parsing date for reminder", e);
         }

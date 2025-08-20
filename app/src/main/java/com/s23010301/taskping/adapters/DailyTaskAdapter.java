@@ -1,7 +1,6 @@
 package com.s23010301.taskping.adapters;
 
 import android.content.Context;
-import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,13 +13,11 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.s23010301.taskping.R;
-import com.s23010301.taskping.activities.TaskDetailsActivity;
 import com.s23010301.taskping.helpers.LocalCacheHelper;
 import com.s23010301.taskping.models.DailyTask;
 import com.s23010301.taskping.helpers.FirestoreHelper;
-import com.s23010301.taskping.models.TaskReminderReceiver;
+import com.s23010301.taskping.receivers.TaskReminderReceiver;
 import com.s23010301.taskping.models.TaskViewModel;
 
 import java.util.List;

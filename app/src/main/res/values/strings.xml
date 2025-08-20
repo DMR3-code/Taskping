@@ -3,5 +3,6 @@
     <string name="nav_home">Home</string>
     <string name="nav_tasks">Tasks</string>
     <string name="nav_profile">Profile</string>
+    <string name="default_notification_channel_id">taskping_notifications</string>
 
 </resources>

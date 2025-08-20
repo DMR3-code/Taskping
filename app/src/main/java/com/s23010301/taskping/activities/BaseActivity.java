@@ -12,7 +12,6 @@ import com.s23010301.taskping.R;
 
 public abstract class BaseActivity extends AppCompatActivity {
     protected BottomNavigationView bottomNavigationView;
-    private final boolean shouldPerformNavigation = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

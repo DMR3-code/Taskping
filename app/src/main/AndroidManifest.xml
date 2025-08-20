@@ -14,6 +14,7 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <uses-feature android:name="android.hardware.location.network" android:required="false" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
 
 
@@ -28,19 +29,26 @@
         tools:targetApi="31">
 
         <receiver
-            android:name=".models.GeofenceBroadcastReceiver"
+            android:name=".receivers.GeofenceBroadcastReceiver"
             android:exported="false">
             <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="com.google.android.gms.location.GeofenceTransitionsIntentService" />
             </intent-filter>
         </receiver>
 
         <receiver
-            android:name=".models.TaskReminderReceiver"
+            android:name=".receivers.TaskReminderReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".receivers.NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="MARK_AS_READ" />
+            </intent-filter>
+        </receiver>
 
-        <!-- Splash Activity: Launcher -->
         <activity
             android:name=".activities.SplashActivity"
             android:exported="true"
@@ -82,6 +90,10 @@
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/default_notification_channel_id" />
 
 
     </application>

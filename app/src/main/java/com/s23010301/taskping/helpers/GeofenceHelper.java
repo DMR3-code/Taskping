@@ -6,7 +6,7 @@ import android.content.Intent;
 
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingRequest;
-import com.s23010301.taskping.models.GeofenceBroadcastReceiver;
+import com.s23010301.taskping.receivers.GeofenceBroadcastReceiver;
 
 public class GeofenceHelper {
     private final Context context;

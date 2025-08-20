@@ -6,17 +6,20 @@ import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.TypeConverters;
 import androidx.room.migration.Migration;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
+import com.s23010301.taskping.models.Notification;
 import com.s23010301.taskping.models.Task;
 
-@Database(entities = {Task.class}, version = 2, exportSchema = false)
+@Database(entities = {Task.class, Notification.class}, version = 3, exportSchema = false)
+@TypeConverters({Converters.class})
 public abstract class AppDatabase extends RoomDatabase {
-
+    public abstract TaskDao taskDao();
+    public abstract NotificationDao notificationDao();
     private static volatile AppDatabase INSTANCE;
 
-    // ✅ Migration logic (already correct)
     public static final Migration MIGRATION_1_2 = new Migration(1, 2) {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {
@@ -26,8 +29,20 @@ public abstract class AppDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE tasks ADD COLUMN location TEXT");
         }
     };
+    public static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE notifications (" +
+                    "id TEXT PRIMARY KEY NOT NULL, " +
+                    "title TEXT, " +
+                    "message TEXT, " +
+                    "type TEXT, " +
+                    "isRead INTEGER NOT NULL, " +
+                    "timestamp INTEGER, " +
+                    "taskId TEXT)");
+        }
+    };
 
-    public abstract TaskDao taskDao();
 
     // ✅ Singleton instance initializer
     public static AppDatabase getInstance(Context context) {
@@ -36,6 +51,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                                     AppDatabase.class, "taskping-db")
+                            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                             .build();
                 }
             }
@@ -43,3 +59,4 @@ public abstract class AppDatabase extends RoomDatabase {
         return INSTANCE;
     }
 }
+
