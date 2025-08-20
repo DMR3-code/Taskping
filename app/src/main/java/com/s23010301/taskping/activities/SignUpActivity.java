@@ -42,10 +42,23 @@ public class SignUpActivity extends AppCompatActivity {
         ImageButton btnBack = findViewById(R.id.btnBack);
 
         // Back button click
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> {
+            navigateBackToLogin();
+        });
 
         // Register button click
         btnRegister.setOnClickListener(v -> handleRegister());
+    }
+    private void navigateBackToLogin() {
+
+        if (isTaskRoot()) {
+
+            Intent intent = new Intent(this, LoginActivity.class);
+            startActivity(intent);
+        }
+        finish();
+
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
     private void handleRegister() {
