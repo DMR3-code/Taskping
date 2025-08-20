@@ -33,11 +33,13 @@ public class FirestoreHelper {
                 .addOnFailureListener(onFailure);
     }
 
-    // For querying tasks
-    public static void queryTasks(String field, Object value, OnSuccessListener<QuerySnapshot> onSuccess) {
-        db.collection("tasks")
-                .whereEqualTo(field, value)
-                .get()
-                .addOnSuccessListener(onSuccess);
+
+    public static void saveUser(String userId, Map<String, Object> userData,
+                                OnSuccessListener<Void> onSuccess,
+                                OnFailureListener onFailure) {
+        db.collection("users").document(userId)
+                .set(userData)
+                .addOnSuccessListener(onSuccess)
+                .addOnFailureListener(onFailure);
     }
 }

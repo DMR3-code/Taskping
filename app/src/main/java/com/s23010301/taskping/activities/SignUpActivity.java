@@ -2,6 +2,7 @@ package com.s23010301.taskping.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.util.Patterns;
 import android.widget.ImageButton;
 import android.widget.Toast;
@@ -10,8 +11,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
 import com.s23010301.taskping.R;
+import com.s23010301.taskping.helpers.FirestoreHelper;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class SignUpActivity extends AppCompatActivity {
@@ -79,6 +84,9 @@ public class SignUpActivity extends AppCompatActivity {
 
                     if (task.isSuccessful()) {
                         FirebaseUser user = mAuth.getCurrentUser();
+                        if (user != null) {
+                            saveUserToFirestore(user.getUid(), username, email);
+                        }
 
                         getSharedPreferences("TaskPingPrefs", MODE_PRIVATE)
                                 .edit()
@@ -92,4 +100,21 @@ public class SignUpActivity extends AppCompatActivity {
                     }
                 });
     }
+    private void saveUserToFirestore(String userId, String username, String email) {
+        Map<String, Object> user = new HashMap<>();
+        user.put("name", username);
+        user.put("email", email);
+        user.put("createdAt", FieldValue.serverTimestamp());
+
+        // Use FirestoreHelper to save the user
+        FirestoreHelper.saveUser(userId, user,
+                aVoid -> {
+                    Log.d("SignUpActivity", "User data saved to Firestore");
+                },
+                e -> {
+                    Log.e("SignUpActivity", "Error saving user data to Firestore", e);
+                }
+        );
+    }
+
 }

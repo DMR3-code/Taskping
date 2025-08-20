@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.s23010301.taskping.R;
 
 import java.util.Objects;
@@ -19,6 +20,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private EditText emailInput, passwordInput;
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,10 +28,11 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
         // Auto-login
         if (mAuth.getCurrentUser() != null) {
-            goToDashboard();
+            fetchUserDataAndGoToDashboard(mAuth.getCurrentUser().getUid());
             return;
         }
 
@@ -77,17 +80,51 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
-                        goToDashboard();
+                        String userId = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
+                        fetchUserDataAndGoToDashboard(userId);
                     } else {
                         Toast.makeText(this, "Login failed: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
-    private void goToDashboard() {
-        SharedPreferences prefs = getSharedPreferences("TaskPingPrefs", MODE_PRIVATE);
-        String username = prefs.getString("username", "User");
+    private void fetchUserDataAndGoToDashboard(String userId) {
+        // Try to get user data from Firestore first
+        db.collection("users").document(userId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists() && documentSnapshot.contains("name")) {
+                        // User data exists in Firestore
+                        String username = documentSnapshot.getString("name");
+                        saveUsernameToPreferences(username);
+                        goToDashboard(username);
+                    } else {
+                        // Fallback to email as username
+                        assert mAuth.getCurrentUser() != null;
+                        String email = mAuth.getCurrentUser().getEmail();
+                        String fallbackUsername = email != null ?
+                                email.split("@")[0] : "User"; // Use part before @ as username
+                        saveUsernameToPreferences(fallbackUsername);
+                        goToDashboard(fallbackUsername);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // If Firestore fails, use email as fallback
+                    assert mAuth.getCurrentUser() != null;
+                    String email = mAuth.getCurrentUser().getEmail();
+                    String fallbackUsername = email != null ?
+                            email.split("@")[0] : "User";
+                    saveUsernameToPreferences(fallbackUsername);
+                    goToDashboard(fallbackUsername);
+                });
+    }
 
+    private void saveUsernameToPreferences(String username) {
+        SharedPreferences prefs = getSharedPreferences("TaskPingPrefs", MODE_PRIVATE);
+        prefs.edit().putString("username", username).apply();
+    }
+
+    private void goToDashboard(String username) {
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
         intent.putExtra("username", username);
         startActivity(intent);
