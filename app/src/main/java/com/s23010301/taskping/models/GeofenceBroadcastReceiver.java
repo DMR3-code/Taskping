@@ -21,32 +21,27 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        // This is the line you mentioned. It must be INSIDE the onReceive method.
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
 
-        // Check for errors
-        if (Objects.requireNonNull(geofencingEvent).hasError()) {
+        // Get the specific geofence ID if available
+        String geofenceId = intent.getStringExtra("geofence_id");
+
+        if (geofencingEvent != null && geofencingEvent.hasError()) {
             Log.e(TAG, "Geofencing Error: " + geofencingEvent.getErrorCode());
             return;
         }
 
-        // Get the transition type (e.g., entering the geofence)
         int geofenceTransition = geofencingEvent.getGeofenceTransition();
 
         if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
             Log.d(TAG, "User has entered a geofence area.");
 
-            // Get the specific geofence(s) that were triggered
             List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
 
-            for (Geofence geofence : Objects.requireNonNull(triggeringGeofences)) {
+            for (Geofence geofence : triggeringGeofences) {
                 String taskId = geofence.getRequestId();
+                Log.d(TAG, "Triggered geofence for task: " + taskId);
                 fetchTaskAndNotify(context, taskId);
-
-                // Cancel the geofence after triggering
-                GeofencingClient geofencingClient = LocationServices.getGeofencingClient(context);
-                geofencingClient.removeGeofences(Arrays.asList(taskId));
-
             }
         }
     }

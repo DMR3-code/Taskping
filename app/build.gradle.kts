@@ -74,5 +74,6 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.google.places)
     annotationProcessor(libs.room.compiler)
+    implementation(libs.android.maps.utils)
 
 }

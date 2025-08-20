@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.DatePicker;
 import android.widget.EditText;
@@ -63,6 +64,10 @@ public class AddTaskActivity extends AppCompatActivity {
     private final Calendar calendarEnd = Calendar.getInstance();
     private ActivityResultLauncher<Intent> locationPickerLauncher;
 
+    // Add retry mechanism for geofencing
+    private static final int MAX_GEOFENCE_RETRIES = 3;
+    private int geofenceRetryCount = 0;
+
     @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +78,13 @@ public class AddTaskActivity extends AppCompatActivity {
         setupLocationPicker();
         setupButtonListeners();
         updateDateFields();
+
+        // Check Google Play Services first
+        if (!checkGooglePlayServices()) {
+            // If Play Services not available, disable location features
+            findViewById(R.id.btnLocation).setEnabled(false);
+            Toast.makeText(this, "Location features disabled - Google Play Services required", Toast.LENGTH_LONG).show();
+        }
 
         // Check all required permissions
         checkAllPermissions();
@@ -162,7 +174,7 @@ public class AddTaskActivity extends AppCompatActivity {
 
                     // Continue with geofencing if needed
                     if (hasLocation) {
-                        addGeofenceWithCallback(
+                        addGeofenceWithRetry(
                                 (String) taskData.get("id"),
                                 selectedLat,
                                 selectedLng,
@@ -214,49 +226,171 @@ public class AddTaskActivity extends AppCompatActivity {
     }
 
     @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-    private void addGeofenceWithCallback(String taskId, double lat, double lng,
-                                         Runnable onSuccess, OnFailureListener onFailure) {
-        if (!checkGeofencePrerequisites()) return;
+    private void addGeofenceWithRetry(String taskId, double lat, double lng,
+                                      Runnable onSuccess, OnFailureListener onFailure) {
+        geofenceRetryCount = 0;
+        attemptGeofenceCreation(taskId, lat, lng, onSuccess, onFailure);
+    }
 
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    private void attemptGeofenceCreation(String taskId, double lat, double lng,
+                                         Runnable onSuccess, OnFailureListener onFailure) {
+        if (!checkGeofencePrerequisites()) {
+            onFailure.onFailure(new Exception("Geofence prerequisites not met"));
+            return;
+        }
+        // Enhanced Google Play Services check
         int status = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this);
         if (status != ConnectionResult.SUCCESS) {
             String error = GoogleApiAvailability.getInstance().getErrorString(status);
-            Toast.makeText(this, "Play Services not available: " + error, Toast.LENGTH_LONG).show();
             Log.e("GeofenceSetup", "Google Play Services error: " + error);
+            if (GoogleApiAvailability.getInstance().isUserResolvableError(status)) {
+                GoogleApiAvailability.getInstance().getErrorDialog(this, status, 9000).show();
+            }
+            onFailure.onFailure(new Exception("Google Play Services not available: " + error));
             return;
         }
-
+        // Validate coordinates
+        if (Math.abs(lat) < 0.001 && Math.abs(lng) < 0.001) {
+            Log.e("GeofenceSetup", "Invalid coordinates (near 0,0): " + lat + ", " + lng);
+            onFailure.onFailure(new Exception("Invalid location coordinates - please pick a valid location"));
+            return;
+        }
+        // Create geofence with enhanced parameters
         Geofence geofence = new Geofence.Builder()
                 .setRequestId(taskId)
-                .setCircularRegion(lat, lng, 100)
+                .setCircularRegion(lat, lng, 200) // Increased radius to 200 meters for better reliability
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
+                .setLoiteringDelay(30000) // 30 seconds loitering delay
                 .build();
-
+        Log.d("GeofenceSetup", "Attempting to add geofence for task: " + taskId + " at " + lat + ", " + lng);
+        // Use individual pending intent for each geofence
         geofencingClient.addGeofences(
                         geofenceHelper.getGeofencingRequest(geofence),
-                        geofenceHelper.getPendingIntent()
-                ).addOnSuccessListener(unused -> onSuccess.run())
+                        geofenceHelper.getPendingIntentForGeofence(taskId) // Use individual intent
+                ).addOnSuccessListener(unused -> {
+                    Log.d("GeofenceSetup", "Geofence added successfully for task: " + taskId);
+                    onSuccess.run();
+                })
                 .addOnFailureListener(e -> {
-                    if (e instanceof ApiException) {
-                        int code = ((ApiException) e).getStatusCode();
-                        if (code == GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE) {
-                            Log.e("Geofence", "GEOFENCE_NOT_AVAILABLE - will retry later");
-                        }
+                    Log.e("GeofenceSetup", "Geofence failed for task: " + taskId, e);
+                    handleGeofenceFailure(taskId, lat, lng, onSuccess, onFailure, e);
+                });
+    }
+
+
+    private boolean checkGooglePlayServices() {
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
+
+        if (resultCode != ConnectionResult.SUCCESS) {
+            if (apiAvailability.isUserResolvableError(resultCode)) {
+                apiAvailability.getErrorDialog(this, resultCode, 9000).show();
+            } else {
+                Log.e("AddTaskActivity", "This device does not support Google Play Services");
+                Toast.makeText(this, "Google Play Services not available on this device", Toast.LENGTH_LONG).show();
+            }
+            return false;
+        }
+        return true;
+    }
+
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    private void handleGeofenceFailure(String taskId, double lat, double lng,
+                                       Runnable onSuccess, OnFailureListener onFailure, Exception e) {
+        if (e instanceof ApiException) {
+            int statusCode = ((ApiException) e).getStatusCode();
+            String statusMessage = GeofenceStatusCodes.getStatusCodeString(statusCode);
+
+            Log.e("GeofenceSetup", "Geofence API error: " + statusMessage + " (code: " + statusCode + ")");
+
+            switch (statusCode) {
+                case GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE:
+                    // Retry with delay if we haven't exceeded max retries
+                    if (geofenceRetryCount < MAX_GEOFENCE_RETRIES) {
+                        geofenceRetryCount++;
+                        Log.d("GeofenceSetup", "Retrying geofence creation, attempt: " + geofenceRetryCount);
+
+                        // Retry after 2 seconds
+                        new Handler().postDelayed(() -> {
+                            attemptGeofenceCreation(taskId, lat, lng, onSuccess, onFailure);
+                        }, 2000);
+                        return;
                     }
-                    onFailure.onFailure(e);
+                    break;
+
+                case GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES:
+                    // Remove old geofences and retry
+                    removeAllGeofencesAndRetry(taskId, lat, lng, onSuccess, onFailure);
+                    return;
+
+                case GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS:
+                    Log.e("GeofenceSetup", "Too many pending intents - this is a code issue");
+                    break;
+            }
+        }
+
+        // If we reach here, either we've exceeded retries or it's a non-retryable error
+        onFailure.onFailure(e);
+    }
+
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    private void removeAllGeofencesAndRetry(String taskId, double lat, double lng,
+                                            Runnable onSuccess, OnFailureListener onFailure) {
+        Log.d("GeofenceSetup", "Removing all geofences due to limit exceeded");
+
+        geofencingClient.removeGeofences(geofenceHelper.getPendingIntent())
+                .addOnSuccessListener(unused -> {
+                    Log.d("GeofenceSetup", "Old geofences removed, retrying new geofence");
+                    // Wait a moment then retry
+                    new android.os.Handler().postDelayed(() -> {
+                        attemptGeofenceCreation(taskId, lat, lng, onSuccess, onFailure);
+                    }, 1000);
+                })
+                .addOnFailureListener(removeError -> {
+                    Log.e("GeofenceSetup", "Failed to remove old geofences", removeError);
+                    onFailure.onFailure(removeError);
                 });
     }
 
     private boolean checkGeofencePrerequisites() {
+        // Check location permissions
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            showToast("Location permission denied");
+            Log.e("GeofenceSetup", "Fine location permission not granted");
+            showToast("Location permission required for location-based reminders");
             return false;
         }
+
+        // Check background location for Android 10+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                Log.w("GeofenceSetup", "Background location permission not granted - geofences may not work reliably");
+                // Don't block geofence creation, but warn user
+                showToast("Background location permission recommended for reliable location reminders");
+            }
+        }
+
+        // Check if location services are enabled
         if (!isLocationEnabled()) {
-            showToast("Please enable GPS");
+            Log.e("GeofenceSetup", "Location services disabled");
+            showToast("Please enable location services in device settings");
             return false;
+        }
+
+        // Check if high accuracy location is enabled
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (locationManager != null) {
+            boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            boolean networkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+            if (!gpsEnabled && !networkEnabled) {
+                Log.e("GeofenceSetup", "No location providers enabled");
+                showToast("Please enable high accuracy location in device settings");
+                return false;
+            }
         }
 
         return true;
@@ -281,12 +415,35 @@ public class AddTaskActivity extends AppCompatActivity {
     }
 
     private void handleGeofenceError(Exception e) {
-        String errorMsg = "Task saved but geofence failed: " +
-                (e instanceof ApiException
-                        ? GeofenceStatusCodes.getStatusCodeString(((ApiException) e).getStatusCode())
-                        : (e != null ? e.getMessage() : "Unknown error"));
-        Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+        String errorMsg;
+        String userMsg;
+
+        if (e instanceof ApiException) {
+            int statusCode = ((ApiException) e).getStatusCode();
+            errorMsg = "Geofence failed: " + GeofenceStatusCodes.getStatusCodeString(statusCode);
+
+            switch (statusCode) {
+                case GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE:
+                    userMsg = "Task saved! Location reminders may not work - try enabling high accuracy location.";
+                    break;
+                case GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES:
+                    userMsg = "Task saved! Too many location reminders active - some older ones were removed.";
+                    break;
+                default:
+                    userMsg = "Task saved! Location reminders may not work on this device.";
+            }
+        } else {
+            errorMsg = "Geofence failed: " + (e != null ? e.getMessage() : "Unknown error");
+            userMsg = "Task saved! Location reminders may not work properly.";
+        }
+
+        Toast.makeText(this, userMsg, Toast.LENGTH_LONG).show();
         Log.e("AddTaskActivity", errorMsg, e);
+
+        // Still consider this a success since the task was saved
+        setResult(RESULT_OK);
+        showLoading(false);
+        finish();
     }
 
     private void handleFirestoreError(FirebaseFirestoreException e) {
@@ -376,9 +533,12 @@ public class AddTaskActivity extends AppCompatActivity {
             permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+        // Background location for Android 10+ (important for geofencing)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+            }
         }
 
         // Alarm permission for Android 12+
@@ -410,18 +570,25 @@ public class AddTaskActivity extends AppCompatActivity {
                         showToast("Reminder notifications may not work without alarm permission");
                     } else if (permissionName.equals(Manifest.permission.ACCESS_FINE_LOCATION)) {
                         showToast("Location features will be disabled");
+                    } else if (permissionName.equals(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                        showToast("Background location recommended for reliable location reminders");
                     }
                 }
             }
 
             if (allPermissionsGranted) {
                 showToast("All permissions granted");
+            } else {
+                // Provide guidance for enabling permissions
+                showToast("Some permissions denied. Check Settings > Apps > [Your App] > Permissions for full functionality");
             }
         }
     }
 
     private boolean isLocationEnabled() {
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        return locationManager != null && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        return locationManager != null &&
+                (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                        locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER));
     }
 }
