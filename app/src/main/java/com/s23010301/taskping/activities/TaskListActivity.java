@@ -1,7 +1,10 @@
 package com.s23010301.taskping.activities;
 
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -94,50 +97,118 @@ public class TaskListActivity extends BaseActivity {
 
         Calendar today = Calendar.getInstance();
         SimpleDateFormat fullFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
-        SimpleDateFormat labelFormat = new SimpleDateFormat("EEE\ndd", Locale.getDefault());
+        SimpleDateFormat dayFormat = new SimpleDateFormat("E", Locale.getDefault()); // "E" gives abbreviated day name (Sat, Sun, etc.)
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd", Locale.getDefault()); // Just the day number
 
         String selectedDate = dateViewModel.getDate().getValue();
         int totalDays = 7;
 
+        // Calculate text size based on screen density for better responsiveness
+        float textSizeSp = 12;
+        float scaledTextSize = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP, textSizeSp, getResources().getDisplayMetrics());
+
         for (int i = 0; i < totalDays; i++) {
             Calendar day = (Calendar) today.clone();
             day.add(Calendar.DATE, i);
+
             String fullDateStr = fullFormat.format(day.getTime());
-            String label = labelFormat.format(day.getTime());
+            String dayName = dayFormat.format(day.getTime()); // "Sat", "Sun", etc.
+            String dayNumber = dateFormat.format(day.getTime()); // "19", "20", etc.
 
-            MaterialButton btn = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-            btn.setText(label);
-            btn.setTag(fullDateStr);
-            btn.setTextSize(12);
-            btn.setAllCaps(false);
-            btn.setPadding(24, 24, 24, 24);
-            btn.setBackgroundResource(R.drawable.date_button_selector);
-            btn.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            btn.setStrokeWidth(0);
+            // Create a vertical LinearLayout to hold day name and date
+            LinearLayout dayLayout = new LinearLayout(this);
+            dayLayout.setOrientation(LinearLayout.VERTICAL);
+            dayLayout.setGravity(Gravity.CENTER);
+            dayLayout.setTag(fullDateStr);
 
+            // Set padding and margins
+            int padding = (int) TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP, 12, getResources().getDisplayMetrics());
+            dayLayout.setPadding(padding, padding, padding, padding);
+
+            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            int margin = (int) TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP, 4, getResources().getDisplayMetrics());
+            layoutParams.setMargins(margin, 0, margin, 0);
+            dayLayout.setLayoutParams(layoutParams);
+
+            // Day name TextView (Sat, Sun, Mon, etc.)
+            TextView dayNameView = new TextView(this);
+            dayNameView.setText(dayName);
+            dayNameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp);
+            dayNameView.setTextColor(getResources().getColor(R.color.gray));
+            dayNameView.setGravity(Gravity.CENTER);
+
+            // Day number TextView
+            TextView dayNumberView = new TextView(this);
+            dayNumberView.setText(dayNumber);
+            dayNumberView.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp + 2); // Slightly larger
+            dayNumberView.setTextColor(getResources().getColor(R.color.black));
+            dayNumberView.setGravity(Gravity.CENTER);
+            dayNumberView.setTypeface(null, Typeface.BOLD);
+
+            // Add TextViews to the layout
+            dayLayout.addView(dayNameView);
+            dayLayout.addView(dayNumberView);
+
+            // Styling for selected date
             if (fullDateStr.equals(selectedDate)) {
-                btn.setSelected(true);
+                dayLayout.setBackgroundResource(R.drawable.date_button_selected);
+                dayNameView.setTextColor(getResources().getColor(R.color.white));
+                dayNumberView.setTextColor(getResources().getColor(R.color.white));
+            } else {
+                dayLayout.setBackgroundResource(R.drawable.date_button_selector);
             }
 
-            btn.setOnClickListener(v -> {
+            dayLayout.setOnClickListener(v -> {
                 String clickedDate = (String) v.getTag();
                 if (!clickedDate.equals(dateViewModel.getDate().getValue())) {
+                    // Update all buttons
                     for (int j = 0; j < dateContainer.getChildCount(); j++) {
-                        dateContainer.getChildAt(j).setSelected(false);
+                        View child = dateContainer.getChildAt(j);
+                        TextView childDayName = (TextView) ((LinearLayout) child).getChildAt(0);
+                        TextView childDayNumber = (TextView) ((LinearLayout) child).getChildAt(1);
+
+                        child.setBackgroundResource(R.drawable.date_button_selector);
+                        childDayName.setTextColor(getResources().getColor(R.color.gray));
+                        childDayNumber.setTextColor(getResources().getColor(R.color.black));
                     }
-                    v.setSelected(true);
-                    dateViewModel.setDate(clickedDate); // 🔹 will auto-update fragments
+
+                    // Set selected state
+                    v.setBackgroundResource(R.drawable.date_button_selected);
+                    TextView selectedDayName = (TextView) ((LinearLayout) v).getChildAt(0);
+                    TextView selectedDayNumber = (TextView) ((LinearLayout) v).getChildAt(1);
+                    selectedDayName.setTextColor(getResources().getColor(R.color.white));
+                    selectedDayNumber.setTextColor(getResources().getColor(R.color.white));
+
+                    dateViewModel.setDate(clickedDate);
                 }
             });
 
-            dateContainer.addView(btn);
+            dateContainer.addView(dayLayout);
         }
 
         // Observe date change to update UI
         dateViewModel.getDate().observe(this, newDate -> {
             for (int i = 0; i < dateContainer.getChildCount(); i++) {
-                View child = dateContainer.getChildAt(i);
-                child.setSelected(child.getTag().equals(newDate));
+                LinearLayout child = (LinearLayout) dateContainer.getChildAt(i);
+                String childDate = (String) child.getTag();
+                TextView dayNameView = (TextView) child.getChildAt(0);
+                TextView dayNumberView = (TextView) child.getChildAt(1);
+
+                if (childDate.equals(newDate)) {
+                    child.setBackgroundResource(R.drawable.date_button_selected);
+                    dayNameView.setTextColor(getResources().getColor(R.color.white));
+                    dayNumberView.setTextColor(getResources().getColor(R.color.white));
+                } else {
+                    child.setBackgroundResource(R.drawable.date_button_selector);
+                    dayNameView.setTextColor(getResources().getColor(R.color.gray));
+                    dayNumberView.setTextColor(getResources().getColor(R.color.black));
+                }
             }
         });
     }
