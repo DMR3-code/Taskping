@@ -44,12 +44,11 @@ Never forget a task again — get notified when you're near a task location!
 ---
 
 ## 🛠️ Technical Stack  
-- **Language**: Kotlin (with Java interoperability)  
-- **Architecture**: MVVM + Repository Pattern  
+- **Language**: Java 
 - **Database**: Room (Local), Firebase Firestore (Cloud)  
 - **Location Services**: Google Maps API, Geofencing API  
 - **Authentication**: Firebase Authentication  
-- **Notifications**: Android AlarmManager, WorkManager  
+- **Notifications**: Android AlarmManager, WorkManager
 - **UI**: Material Design Components, ViewPager2, Navigation Component  
 
 ---
@@ -210,6 +209,7 @@ service cloud.firestore {
 ### TaskPing - Never forget what matters, wherever you are! 🎯📍
 
 ---
+
 
 
 
