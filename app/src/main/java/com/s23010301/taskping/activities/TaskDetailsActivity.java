@@ -1,29 +1,49 @@
+
 package com.s23010301.taskping.activities;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.location.GeofencingClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.firestore.FieldValue;
 import com.s23010301.taskping.R;
+import com.s23010301.taskping.helpers.FirestoreHelper;
+import com.s23010301.taskping.helpers.LocalCacheHelper;
+import com.s23010301.taskping.models.Task;
+import com.s23010301.taskping.receivers.TaskReminderReceiver;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class TaskDetailsActivity extends AppCompatActivity {
+
+    private Task currentTask;
+    private MaterialButton btnDone;
+    private LocalCacheHelper localCache;
+    private boolean isTaskDone = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_task_details);
+
+        localCache = LocalCacheHelper.getInstance(this);
 
         // Setup back button
         ImageButton btnBack = findViewById(R.id.btnBack);
@@ -35,17 +55,17 @@ public class TaskDetailsActivity extends AppCompatActivity {
         TextView startDate = findViewById(R.id.detailStartDate);
         TextView endDate = findViewById(R.id.detailEndDate);
         TextView remaining = findViewById(R.id.detailRemainingTime);
-        LinearLayout locationSection = findViewById(R.id.locationSection);
-        TextView location = findViewById(R.id.detailLocation);
-        MaterialButton btnViewOnMap = findViewById(R.id.btnViewOnMap);
+        btnDone = findViewById(R.id.btnDone);
 
         Intent intent = getIntent();
+        String taskId = intent.getStringExtra("taskId");
         String taskTitle = intent.getStringExtra("title");
         String taskDescription = intent.getStringExtra("description");
         String startDateStr = intent.getStringExtra("startDate");
         String endDateStr = intent.getStringExtra("endDate");
         boolean hasLocation = intent.getBooleanExtra("hasLocation", false);
         String locationStr = intent.getStringExtra("location");
+        boolean isDone = intent.getBooleanExtra("isDone", false);
 
         // Set task details
         title.setText(taskTitle);
@@ -67,34 +87,172 @@ public class TaskDetailsActivity extends AppCompatActivity {
 
         remaining.setText(getRemainingText(endDateStr));
 
-        // Handle location data
-        if (hasLocation && locationStr != null) {
-            locationSection.setVisibility(View.VISIBLE);
+        // Handle task completion state
+        isTaskDone = isDone;
+        updateDoneButtonState();
 
-            String[] coords = locationStr.split(",");
-            if (coords.length == 2) {
-                try {
-                    double lat = Double.parseDouble(coords[0].trim());
-                    double lng = Double.parseDouble(coords[1].trim());
-                    location.setText(String.format(Locale.getDefault(), "%.4f, %.4f", lat, lng));
-                } catch (NumberFormatException e) {
-                    location.setText(locationStr);
-                }
+        // Set up click listener for Done button
+        btnDone.setOnClickListener(v -> {
+            if (isTaskDone) {
+                undoTaskCompletion(taskId);
             } else {
-                location.setText(locationStr);
+                showCompletionConfirmation(taskId);
             }
+        });
 
-            btnViewOnMap.setOnClickListener(v -> {
-                Intent mapIntent = new Intent(this, MapPickerActivity.class);
-                mapIntent.putExtra("lat", Double.parseDouble(coords[0].trim()));
-                mapIntent.putExtra("lng", Double.parseDouble(coords[1].trim()));
-                startActivity(mapIntent);
-            });
-        } else {
-            locationSection.setVisibility(View.GONE);
+        // Load full task data from local cache for better handling
+        if (taskId != null) {
+            loadFullTaskData(taskId);
         }
     }
 
+    private void loadFullTaskData(String taskId) {
+        localCache.getTaskById(taskId).observe(this, task -> {
+            if (task != null) {
+                currentTask = task;
+                isTaskDone = task.isDone();
+                updateDoneButtonState();
+            }
+        });
+    }
+
+    private void updateDoneButtonState() {
+        if (isTaskDone) {
+            btnDone.setText("Mark as Undone");
+            btnDone.setIconResource(R.drawable.ic_undo);
+            btnDone.setBackgroundTintList(getColorStateList(R.color.green));
+        } else {
+            btnDone.setText("Mark as Done");
+            btnDone.setIconResource(R.drawable.ic_check);
+            btnDone.setBackgroundTintList(getColorStateList(R.color.blue));
+        }
+    }
+
+    private void showCompletionConfirmation(String taskId) {
+        new AlertDialog.Builder(this)
+                .setTitle("Mark as Done?")
+                .setMessage("Are you sure you want to mark this task as completed?")
+                .setPositiveButton("Yes", (dialog, which) -> markTaskAsDone(taskId))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void markTaskAsDone(String taskId) {
+        // Show loading state
+        btnDone.setEnabled(false);
+        btnDone.setText("Updating...");
+
+        // Update local cache first for instant feedback
+        if (currentTask != null) {
+            currentTask.setDone(true);
+            localCache.insertOrUpdateTasks(Collections.singletonList(currentTask));
+        }
+
+        // Update Firestore
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("done", true);
+        updates.put("completedAt", FieldValue.serverTimestamp());
+
+        FirestoreHelper.updateTask(taskId, updates,
+                unused -> {
+                    // Success
+                    isTaskDone = true;
+                    updateDoneButtonState();
+                    btnDone.setEnabled(true);
+
+                    // Cancel any reminders for this task
+                    cancelTaskReminders(taskId);
+
+                    Toast.makeText(this, "Task marked as done!", Toast.LENGTH_SHORT).show();
+                },
+                e -> {
+                    // Error - revert local changes
+                    if (currentTask != null) {
+                        currentTask.setDone(false);
+                        localCache.insertOrUpdateTasks(Collections.singletonList(currentTask));
+                    }
+                    isTaskDone = false;
+                    updateDoneButtonState();
+                    btnDone.setEnabled(true);
+
+                    Toast.makeText(this, "Failed to update task. Please try again.", Toast.LENGTH_SHORT).show();
+                }
+        );
+    }
+
+    private void undoTaskCompletion(String taskId) {
+        // Show loading state
+        btnDone.setEnabled(false);
+        btnDone.setText("Updating...");
+
+        // Update local cache first
+        if (currentTask != null) {
+            currentTask.setDone(false);
+            localCache.insertOrUpdateTasks(Collections.singletonList(currentTask));
+        }
+
+        // Update Firestore
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("done", false);
+        updates.put("completedAt", null);
+
+        FirestoreHelper.updateTask(taskId, updates,
+                unused -> {
+                    // Success
+                    isTaskDone = false;
+                    updateDoneButtonState();
+                    btnDone.setEnabled(true);
+
+                    // Re-schedule reminders if needed
+                    rescheduleTaskReminders(taskId);
+
+                    Toast.makeText(this, "Task marked as undone!", Toast.LENGTH_SHORT).show();
+                },
+                e -> {
+                    // Error - revert local changes
+                    if (currentTask != null) {
+                        currentTask.setDone(true);
+                        localCache.insertOrUpdateTasks(Collections.singletonList(currentTask));
+                    }
+                    isTaskDone = true;
+                    updateDoneButtonState();
+                    btnDone.setEnabled(true);
+
+                    Toast.makeText(this, "Failed to update task. Please try again.", Toast.LENGTH_SHORT).show();
+                }
+        );
+    }
+
+    private void cancelTaskReminders(String taskId) {
+        // Cancel any alarms/reminders for this task
+        TaskReminderReceiver.cancelReminder(this, taskId);
+
+        // Remove geofence if exists
+        if (currentTask != null && currentTask.hasLocation()) {
+            GeofencingClient geofencingClient = LocationServices.getGeofencingClient(this);
+            geofencingClient.removeGeofences(Collections.singletonList(taskId));
+        }
+    }
+
+    private void rescheduleTaskReminders(String taskId) {
+        // Re-schedule reminders if task has future date
+        if (currentTask != null && !isTaskOverdue(currentTask.getEndDate())) {
+            // You'll need to implement this based on your reminder logic
+            // This would re-create alarms/geofences
+        }
+    }
+
+    private boolean isTaskOverdue(String endDate) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
+            Date end = sdf.parse(endDate);
+            return end != null && end.before(new Date());
+        } catch (ParseException e) {
+            return false;
+        }
+    }
+
+    // Your existing helper methods (formatDate, getRemainingText) remain here
     private String formatDate(String dateStr, String inputPattern, String outputPattern) {
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat(inputPattern, Locale.getDefault());

@@ -25,20 +25,25 @@ public class FirestoreHelper {
                 .addOnSuccessListener(onSuccess)
                 .addOnFailureListener(onFailure);
     }
-
     // For deleting tasks by ID
     public static void deleteTask(String taskId, OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
         db.collection("tasks").document(taskId).delete()
                 .addOnSuccessListener(onSuccess)
                 .addOnFailureListener(onFailure);
     }
-
-
     public static void saveUser(String userId, Map<String, Object> userData,
                                 OnSuccessListener<Void> onSuccess,
                                 OnFailureListener onFailure) {
         db.collection("users").document(userId)
                 .set(userData)
+                .addOnSuccessListener(onSuccess)
+                .addOnFailureListener(onFailure);
+    }
+    public static void updateTask(String taskId, Map<String, Object> updates,
+                                  OnSuccessListener<Void> onSuccess,
+                                  OnFailureListener onFailure) {
+        db.collection("tasks").document(taskId)
+                .update(updates)
                 .addOnSuccessListener(onSuccess)
                 .addOnFailureListener(onFailure);
     }

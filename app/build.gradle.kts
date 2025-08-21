@@ -75,5 +75,10 @@ dependencies {
     implementation(libs.google.places)
     annotationProcessor(libs.room.compiler)
     implementation(libs.android.maps.utils)
+    implementation(libs.lifecycle.viewmodel.ktx)
+    implementation(libs.lifecycle.livedata.ktx)
+    implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.play.services.location.v2101)
+    implementation(libs.places.v330)
 
 }

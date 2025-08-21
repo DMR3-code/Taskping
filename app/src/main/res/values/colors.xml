@@ -12,6 +12,7 @@
     <color name="cardColor4">#F9A825</color>
     <color name="cardColor5">#00ACC1</color>
     <color name="gray_300">#E0E0E0</color>
+    <color name="green">#4CAF50</color>
 
 
     <integer-array name="task_colors">
