@@ -119,13 +119,16 @@ public class TaskDetailsActivity extends AppCompatActivity {
             }
 
             long daysLeft = TimeUnit.MILLISECONDS.toDays(diff);
-            if (daysLeft == 0) {
+            long hoursLeft = TimeUnit.MILLISECONDS.toHours(diff) % 24;
+
+            if (daysLeft == 0 && hoursLeft == 0) {
                 return "Due today!";
+            } else if (daysLeft == 0) {
+                return String.format(Locale.getDefault(), "%d hours remaining", hoursLeft);
             } else if (daysLeft == 1) {
-                return "Due tomorrow";
+                return String.format(Locale.getDefault(), "1 day %d hours remaining", hoursLeft);
             } else {
-                return String.format(Locale.getDefault(),
-                        "%d days remaining", daysLeft);
+                return String.format(Locale.getDefault(), "%d days %d hours remaining", daysLeft, hoursLeft);
             }
         } catch (ParseException e) {
             return "Unknown deadline";

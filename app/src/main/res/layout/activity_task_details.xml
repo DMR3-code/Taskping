@@ -36,6 +36,7 @@
                 android:textColor="@color/blue"
                 android:textSize="18sp"
                 android:textStyle="bold" />
+
         </RelativeLayout>
 
         <!-- Task Title -->
