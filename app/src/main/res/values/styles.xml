@@ -13,4 +13,33 @@
         <item name="labelVisibilityMode">labeled</item>
     </style>
 
+    <!-- Custom Alert Dialog Style -->
+    <style name="CustomAlertDialog" parent="Theme.Material3.DayNight.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/dialog_background</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="buttonBarButtonStyle">@style/CustomDialogButton</item>
+    </style>
+
+    <style name="CustomDialogButton" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/primary_color</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Custom Button Style -->
+    <style name="RoundedButton" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/rounded_button_background</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:elevation">4dp</item>
+        <item name="cornerRadius">24dp</item>
+    </style>
+
+    <!-- Card Style -->
+    <style name="StatsCard" parent="android:Widget">
+        <item name="android:background">@drawable/custom_card_background</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:elevation">2dp</item>
+    </style>
+
 </resources>

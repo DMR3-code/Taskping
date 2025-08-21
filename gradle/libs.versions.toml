@@ -13,10 +13,8 @@ lifecycleViewmodelKtx = "2.9.2"
 material = "1.12.0"
 activity = "1.10.1"
 constraintlayout = "2.2.1"
-materialVersion = "<latest-version>"
 places = "3.3.0"
 playServicesLocation = "21.3.0"
-playServicesLocationVersion = "21.0.1"
 playServicesMaps = "19.2.0"
 viewpager2 = "1.1.0"
 roomCommonJvm = "2.7.2"
@@ -40,10 +38,7 @@ lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
-material-vlatestversion = { module = "com.google.android.material:material", version.ref = "materialVersion" }
-places-v330 = { module = "com.google.android.libraries.places:places", version.ref = "places" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
-play-services-location-v2101 = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocationVersion" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 viewpager2 = { module = "androidx.viewpager2:viewpager2", version.ref = "viewpager2" }
 google-places = { group = "com.google.android.libraries.places", name = "places", version = "4.4.1" }
