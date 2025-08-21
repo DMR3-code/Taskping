@@ -1,6 +1,8 @@
 package com.s23010301.taskping.activities;
 
+import android.animation.ObjectAnimator;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.TypedValue;
@@ -11,10 +13,12 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.s23010301.taskping.R;
@@ -30,9 +34,10 @@ import java.util.Date;
 import java.util.Locale;
 
 public class TaskListActivity extends BaseActivity {
-    private final String[] tabTitles = new String[]{"Priority Task", "Daily Task"};
+    private final String[] tabTitles = new String[]{"Priority Tasks", "Daily Tasks"};
     private DateViewModel dateViewModel;
     private TaskViewModel taskViewModel;
+    private LinearLayout selectedDateView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,11 +71,34 @@ public class TaskListActivity extends BaseActivity {
                 (tab, position) -> tab.setText(tabTitles[position])
         ).attach();
 
-        generateDateStrip(dateContainer);
-        btnAddTask.setOnClickListener(v -> startActivity(new Intent(this, AddTaskActivity.class)));
+        generateEnhancedDateStrip(dateContainer);
+
+        // Enhanced button click with ripple effect
+        btnAddTask.setOnClickListener(v -> {
+            animateButtonClick(v);
+            startActivity(new Intent(this, AddTaskActivity.class));
+        });
 
         setupNavigationObserver();
+    }
 
+    private void animateButtonClick(View view) {
+        ObjectAnimator scaleDownX = ObjectAnimator.ofFloat(view, "scaleX", 0.95f);
+        ObjectAnimator scaleDownY = ObjectAnimator.ofFloat(view, "scaleY", 0.95f);
+        scaleDownX.setDuration(100);
+        scaleDownY.setDuration(100);
+
+        scaleDownX.start();
+        scaleDownY.start();
+
+        view.postDelayed(() -> {
+            ObjectAnimator scaleUpX = ObjectAnimator.ofFloat(view, "scaleX", 1.0f);
+            ObjectAnimator scaleUpY = ObjectAnimator.ofFloat(view, "scaleY", 1.0f);
+            scaleUpX.setDuration(100);
+            scaleUpY.setDuration(100);
+            scaleUpX.start();
+            scaleUpY.start();
+        }, 100);
     }
 
     private void setupNavigationObserver() {
@@ -87,129 +115,149 @@ public class TaskListActivity extends BaseActivity {
             }
         });
     }
+
     @Override
     protected int getCurrentNavItem() {
         return R.id.nav_tasks;
     }
 
-    private void generateDateStrip(LinearLayout dateContainer) {
+    private void generateEnhancedDateStrip(LinearLayout dateContainer) {
         dateContainer.removeAllViews();
 
         Calendar today = Calendar.getInstance();
         SimpleDateFormat fullFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
-        SimpleDateFormat dayFormat = new SimpleDateFormat("E", Locale.getDefault()); // "E" gives abbreviated day name (Sat, Sun, etc.)
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd", Locale.getDefault()); // Just the day number
+        SimpleDateFormat dayFormat = new SimpleDateFormat("E", Locale.getDefault());
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd", Locale.getDefault());
 
         String selectedDate = dateViewModel.getDate().getValue();
         int totalDays = 7;
-
-        // Calculate text size based on screen density for better responsiveness
-        float textSizeSp = 12;
-        float scaledTextSize = TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_SP, textSizeSp, getResources().getDisplayMetrics());
 
         for (int i = 0; i < totalDays; i++) {
             Calendar day = (Calendar) today.clone();
             day.add(Calendar.DATE, i);
 
             String fullDateStr = fullFormat.format(day.getTime());
-            String dayName = dayFormat.format(day.getTime()); // "Sat", "Sun", etc.
-            String dayNumber = dateFormat.format(day.getTime()); // "19", "20", etc.
+            String dayName = dayFormat.format(day.getTime());
+            String dayNumber = dateFormat.format(day.getTime());
 
-            // Create a vertical LinearLayout to hold day name and date
-            LinearLayout dayLayout = new LinearLayout(this);
-            dayLayout.setOrientation(LinearLayout.VERTICAL);
-            dayLayout.setGravity(Gravity.CENTER);
-            dayLayout.setTag(fullDateStr);
-
-            // Set padding and margins
-            int padding = (int) TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP, 12, getResources().getDisplayMetrics());
-            dayLayout.setPadding(padding, padding, padding, padding);
-
-            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-            int margin = (int) TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP, 4, getResources().getDisplayMetrics());
-            layoutParams.setMargins(margin, 0, margin, 0);
-            dayLayout.setLayoutParams(layoutParams);
-
-            // Day name TextView (Sat, Sun, Mon, etc.)
-            TextView dayNameView = new TextView(this);
-            dayNameView.setText(dayName);
-            dayNameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp);
-            dayNameView.setTextColor(getResources().getColor(R.color.gray));
-            dayNameView.setGravity(Gravity.CENTER);
-
-            // Day number TextView
-            TextView dayNumberView = new TextView(this);
-            dayNumberView.setText(dayNumber);
-            dayNumberView.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp + 2); // Slightly larger
-            dayNumberView.setTextColor(getResources().getColor(R.color.black));
-            dayNumberView.setGravity(Gravity.CENTER);
-            dayNumberView.setTypeface(null, Typeface.BOLD);
-
-            // Add TextViews to the layout
-            dayLayout.addView(dayNameView);
-            dayLayout.addView(dayNumberView);
-
-            // Styling for selected date
-            if (fullDateStr.equals(selectedDate)) {
-                dayLayout.setBackgroundResource(R.drawable.date_button_selected);
-                dayNameView.setTextColor(getResources().getColor(R.color.white));
-                dayNumberView.setTextColor(getResources().getColor(R.color.white));
-            } else {
-                dayLayout.setBackgroundResource(R.drawable.date_button_selector);
-            }
-
-            dayLayout.setOnClickListener(v -> {
-                String clickedDate = (String) v.getTag();
-                if (!clickedDate.equals(dateViewModel.getDate().getValue())) {
-                    // Update all buttons
-                    for (int j = 0; j < dateContainer.getChildCount(); j++) {
-                        View child = dateContainer.getChildAt(j);
-                        TextView childDayName = (TextView) ((LinearLayout) child).getChildAt(0);
-                        TextView childDayNumber = (TextView) ((LinearLayout) child).getChildAt(1);
-
-                        child.setBackgroundResource(R.drawable.date_button_selector);
-                        childDayName.setTextColor(getResources().getColor(R.color.gray));
-                        childDayNumber.setTextColor(getResources().getColor(R.color.black));
-                    }
-
-                    // Set selected state
-                    v.setBackgroundResource(R.drawable.date_button_selected);
-                    TextView selectedDayName = (TextView) ((LinearLayout) v).getChildAt(0);
-                    TextView selectedDayNumber = (TextView) ((LinearLayout) v).getChildAt(1);
-                    selectedDayName.setTextColor(getResources().getColor(R.color.white));
-                    selectedDayNumber.setTextColor(getResources().getColor(R.color.white));
-
-                    dateViewModel.setDate(clickedDate);
-                }
-            });
-
-            dateContainer.addView(dayLayout);
+            // Create enhanced date card
+            MaterialCardView dateCard = createEnhancedDateCard(dayName, dayNumber, fullDateStr, selectedDate);
+            dateContainer.addView(dateCard);
         }
 
         // Observe date change to update UI
-        dateViewModel.getDate().observe(this, newDate -> {
-            for (int i = 0; i < dateContainer.getChildCount(); i++) {
-                LinearLayout child = (LinearLayout) dateContainer.getChildAt(i);
-                String childDate = (String) child.getTag();
-                TextView dayNameView = (TextView) child.getChildAt(0);
-                TextView dayNumberView = (TextView) child.getChildAt(1);
+        dateViewModel.getDate().observe(this, newDate -> updateDateStripSelection(dateContainer, newDate));
+    }
 
-                if (childDate.equals(newDate)) {
-                    child.setBackgroundResource(R.drawable.date_button_selected);
-                    dayNameView.setTextColor(getResources().getColor(R.color.white));
-                    dayNumberView.setTextColor(getResources().getColor(R.color.white));
-                } else {
-                    child.setBackgroundResource(R.drawable.date_button_selector);
-                    dayNameView.setTextColor(getResources().getColor(R.color.gray));
-                    dayNumberView.setTextColor(getResources().getColor(R.color.black));
-                }
+    private MaterialCardView createEnhancedDateCard(String dayName, String dayNumber, String fullDateStr, String selectedDate) {
+        MaterialCardView dateCard = new MaterialCardView(this);
+
+        // Card styling
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 60, getResources().getDisplayMetrics()),
+                (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 76, getResources().getDisplayMetrics())
+        );
+        int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics());
+        cardParams.setMargins(margin, 0, margin, 0);
+        dateCard.setLayoutParams(cardParams);
+
+        dateCard.setRadius(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics()));
+        dateCard.setCardElevation(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()));
+        dateCard.setTag(fullDateStr);
+
+        // Inner layout
+        LinearLayout dayLayout = new LinearLayout(this);
+        dayLayout.setOrientation(LinearLayout.VERTICAL);
+        dayLayout.setGravity(Gravity.CENTER);
+
+        int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, getResources().getDisplayMetrics());
+        dayLayout.setPadding(padding, padding, padding, padding);
+
+        // Day name TextView
+        TextView dayNameView = new TextView(this);
+        dayNameView.setText(dayName);
+        dayNameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        dayNameView.setGravity(Gravity.CENTER);
+        dayNameView.setTypeface(null, Typeface.NORMAL);
+
+        // Day number TextView
+        TextView dayNumberView = new TextView(this);
+        dayNumberView.setText(dayNumber);
+        dayNumberView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        dayNumberView.setGravity(Gravity.CENTER);
+        dayNumberView.setTypeface(null, Typeface.BOLD);
+
+        dayLayout.addView(dayNameView);
+
+        // Add some space between day name and number
+        View spacer = new View(this);
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 4));
+        dayLayout.addView(spacer);
+
+        dayLayout.addView(dayNumberView);
+        dateCard.addView(dayLayout);
+
+        // Set initial styling
+        boolean isSelected = fullDateStr.equals(selectedDate);
+        updateDateCardStyling(dateCard, dayNameView, dayNumberView, isSelected);
+
+        // Click listener with animation
+        dateCard.setOnClickListener(v -> {
+            String clickedDate = (String) v.getTag();
+            if (!clickedDate.equals(dateViewModel.getDate().getValue())) {
+                animateDateCardClick(dateCard);
+                dateViewModel.setDate(clickedDate);
             }
         });
+
+        return dateCard;
+    }
+
+    private void updateDateCardStyling(MaterialCardView dateCard, TextView dayNameView, TextView dayNumberView, boolean isSelected) {
+        if (isSelected) {
+            dateCard.setCardBackgroundColor(ContextCompat.getColor(this, R.color.blue));
+            dateCard.setElevation(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics()));
+            dayNameView.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            dayNumberView.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            selectedDateView = (LinearLayout) dateCard.getChildAt(0);
+        } else {
+            dateCard.setCardBackgroundColor(ContextCompat.getColor(this, android.R.color.white));
+            dateCard.setElevation(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()));
+            dayNameView.setTextColor(ContextCompat.getColor(this, R.color.gray));
+            dayNumberView.setTextColor(ContextCompat.getColor(this, android.R.color.black));
+        }
+    }
+
+    private void animateDateCardClick(View view) {
+        ObjectAnimator scaleDownX = ObjectAnimator.ofFloat(view, "scaleX", 0.9f);
+        ObjectAnimator scaleDownY = ObjectAnimator.ofFloat(view, "scaleY", 0.9f);
+        scaleDownX.setDuration(150);
+        scaleDownY.setDuration(150);
+
+        scaleDownX.start();
+        scaleDownY.start();
+
+        view.postDelayed(() -> {
+            ObjectAnimator scaleUpX = ObjectAnimator.ofFloat(view, "scaleX", 1.0f);
+            ObjectAnimator scaleUpY = ObjectAnimator.ofFloat(view, "scaleY", 1.0f);
+            scaleUpX.setDuration(150);
+            scaleUpY.setDuration(150);
+            scaleUpX.start();
+            scaleUpY.start();
+        }, 150);
+    }
+
+    private void updateDateStripSelection(LinearLayout dateContainer, String newDate) {
+        for (int i = 0; i < dateContainer.getChildCount(); i++) {
+            MaterialCardView dateCard = (MaterialCardView) dateContainer.getChildAt(i);
+            LinearLayout dayLayout = (LinearLayout) dateCard.getChildAt(0);
+            String childDate = (String) dateCard.getTag();
+
+            TextView dayNameView = (TextView) dayLayout.getChildAt(0);
+            TextView dayNumberView = (TextView) dayLayout.getChildAt(2); // Account for spacer
+
+            boolean isSelected = childDate.equals(newDate);
+            updateDateCardStyling(dateCard, dayNameView, dayNumberView, isSelected);
+        }
     }
 }

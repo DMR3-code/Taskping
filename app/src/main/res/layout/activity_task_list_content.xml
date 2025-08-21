@@ -4,75 +4,133 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white">
+    android:background="#FAFAFA">
 
-    <!-- Month Header -->
-    <TextView
-        android:id="@+id/monthText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="May, 2025"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="@android:color/black"
-        android:layout_marginTop="24dp"
-        android:layout_marginStart="24dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <!-- + Add Task Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnAddTask"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="+ Add Task"
-        android:textColor="@android:color/white"
-        app:backgroundTint="@color/blue"
-        app:cornerRadius="16dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="24dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- Horizontal Date Strip -->
-    <HorizontalScrollView
-        android:id="@+id/dateStrip"
+    <!-- Top Header Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/headerCard"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:layout_marginTop="16dp"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:scrollbars="none"
-        app:layout_constraintTop_toBottomOf="@id/monthText"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout
-            android:id="@+id/dateContainer"
-            android:layout_width="wrap_content"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal" />
-    </HorizontalScrollView>
+            android:padding="20dp">
 
-    <!-- TabLayout -->
+            <!-- Month Header with Icon -->
+            <ImageView
+                android:id="@+id/calendarIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_calendar"
+                android:tint="@color/blue"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/monthText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="May, 2025"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#1A1A1A"
+                android:layout_marginStart="12dp"
+                app:layout_constraintStart_toEndOf="@id/calendarIcon"
+                app:layout_constraintTop_toTopOf="@id/calendarIcon"
+                app:layout_constraintBottom_toBottomOf="@id/calendarIcon"
+                app:layout_constraintEnd_toStartOf="@id/btnAddTask" />
+
+            <!-- Enhanced Add Task Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAddTask"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="+ Add Task"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/blue"
+                app:cornerRadius="24dp"
+                app:elevation="2dp"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Enhanced Date Strip -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/dateStripCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="12dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="2dp"
+        app:cardBackgroundColor="@android:color/white"
+        app:layout_constraintTop_toBottomOf="@id/headerCard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <HorizontalScrollView
+            android:id="@+id/dateStrip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/dateContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Enhanced TabLayout -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="16dp"
+        android:background="@android:color/white"
+        android:elevation="2dp"
         app:tabMode="fixed"
         app:tabIndicatorColor="@color/blue"
+        app:tabIndicatorHeight="3dp"
         app:tabSelectedTextColor="@color/blue"
-        app:tabTextColor="#888"
-        android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/dateStrip"
+        app:tabTextColor="#666666"
+        app:tabTextAppearance="@style/TabTextStyle"
+        app:tabRippleColor="@color/blue_light"
+        app:layout_constraintTop_toBottomOf="@id/dateStripCard"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- ViewPager2 -->
+    <!-- ViewPager2 with enhanced background -->
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:background="@android:color/white"
         app:layout_constraintTop_toBottomOf="@id/tabLayout"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

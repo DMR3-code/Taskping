@@ -13,6 +13,7 @@
     <color name="cardColor5">#00ACC1</color>
     <color name="gray_300">#E0E0E0</color>
     <color name="green">#4CAF50</color>
+    <color name="card_background">#FFFFFF</color>
 
 
     <integer-array name="task_colors">
@@ -94,5 +95,6 @@
     <!-- Dividers -->
     <color name="divider">#E0E0E0</color>
     <color name="divider_light">#F0F0F0</color>
+
 </resources>
 
