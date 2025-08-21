@@ -1,6 +1,8 @@
 package com.s23010301.taskping.activities;
 
 import android.Manifest;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.DatePickerDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -9,7 +11,11 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.TextWatcher;
+import android.text.Editable;
 import android.util.Log;
+import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -18,15 +24,19 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresPermission;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.android.gms.location.Geofence;
@@ -53,24 +63,38 @@ import java.util.Map;
 import java.util.UUID;
 
 public class AddTaskActivity extends AppCompatActivity {
+
+    // UI Components
+    private MaterialToolbar toolbar;
+    private TextInputEditText inputTitle, inputDescription, inputStartDate, inputEndDate;
+    private TextInputLayout titleInputLayout;
+    private MaterialButton btnPriority, btnDaily, btnLocation;
+    private ExtendedFloatingActionButton btnCreate;
+
+    // Geofencing
     private GeofencingClient geofencingClient;
     private GeofenceHelper geofenceHelper;
     private double selectedLat = 0.0;
     private double selectedLng = 0.0;
     private boolean hasLocation = false;
-    private EditText inputTitle, inputDescription, inputStartDate, inputEndDate;
-    private MaterialButton btnPriority, btnDaily, btnCreate;
+    private static final int MAX_GEOFENCE_RETRIES = 3;
+    private int geofenceRetryCount = 0;
+
+    // Task Configuration
     private boolean isPriority = true;
     private final Calendar calendarStart = Calendar.getInstance();
     private final Calendar calendarEnd = Calendar.getInstance();
+
+    // Activity Management
     private ActivityResultLauncher<Intent> locationPickerLauncher;
-    private static final int MAX_GEOFENCE_RETRIES = 3;
-    private int geofenceRetryCount = 0;
 
     // Edit mode variables
     private String editMode = "create"; // "create", "edit", or "duplicate"
     private String editTaskId = null;
     private Task currentTask = null;
+
+    // Animation and UI State
+    private boolean isFormValid = false;
 
     @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
     @Override
@@ -78,37 +102,105 @@ public class AddTaskActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_task);
 
-        setupToolbar();
         initializeViews();
+        setupToolbar();
         setupLocationPicker();
         setupButtonListeners();
+        setupFormValidation();
 
         // Handle different modes (create, edit, duplicate)
         handleIntentExtras();
 
+        // Initialize dates
+        initializeDates();
         updateDateFields();
 
         // Check Google Play Services first
         if (!checkGooglePlayServices()) {
             // If Play Services not available, disable location features
-            findViewById(R.id.btnLocation).setEnabled(false);
-            Toast.makeText(this, "Location features disabled - Google Play Services required", Toast.LENGTH_LONG).show();
+            btnLocation.setEnabled(false);
+            showLocationServiceWarning();
         }
 
         // Check all required permissions
         checkAllPermissions();
+
+        // Setup initial animations
+        setupInitialAnimations();
+    }
+
+    private void initializeViews() {
+        // Toolbar
+        toolbar = findViewById(R.id.toolbar);
+
+        // Input fields
+        inputTitle = findViewById(R.id.inputTitle);
+        inputDescription = findViewById(R.id.inputDescription);
+        inputStartDate = findViewById(R.id.inputStartDate);
+        inputEndDate = findViewById(R.id.inputEndDate);
+
+        // Input layouts
+        titleInputLayout = findViewById(R.id.titleInputLayout);
+
+        // Buttons
+        btnPriority = findViewById(R.id.btnPriority);
+        btnDaily = findViewById(R.id.btnDaily);
+        btnLocation = findViewById(R.id.btnLocation);
+        btnCreate = findViewById(R.id.btnCreate);
+
+        // Geofencing
+        geofencingClient = LocationServices.getGeofencingClient(this);
+        geofenceHelper = new GeofenceHelper(this);
     }
 
     private void setupToolbar() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) {
-            setSupportActionBar(toolbar);
-            if (getSupportActionBar() != null) {
-                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-                getSupportActionBar().setDisplayShowHomeEnabled(true);
-            }
-            toolbar.setNavigationOnClickListener(v -> finish());
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
         }
+
+        toolbar.setNavigationOnClickListener(v -> {
+            // Add animation before finishing
+            animateExit();
+        });
+    }
+
+    private void setupFormValidation() {
+        inputTitle.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                validateForm();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    private void validateForm() {
+        String title = inputTitle.getText().toString().trim();
+        boolean wasValid = isFormValid;
+        isFormValid = !title.isEmpty();
+
+        // Update title input layout state
+        if (title.isEmpty() && inputTitle.hasFocus()) {
+            titleInputLayout.setError("Task title is required");
+        } else {
+            titleInputLayout.setError(null);
+        }
+
+        // Animate FAB if validation state changed
+        if (wasValid != isFormValid) {
+            animateFab();
+        }
+
+        // Update FAB state
+        btnCreate.setEnabled(isFormValid);
+        btnCreate.setAlpha(isFormValid ? 1.0f : 0.6f);
     }
 
     private void handleIntentExtras() {
@@ -146,25 +238,16 @@ public class AddTaskActivity extends AppCompatActivity {
         if (startDate != null) inputStartDate.setText(startDate);
         if (endDate != null) inputEndDate.setText(endDate);
 
-        // Set task type
+        // Set task type with animation
         if ("priority".equals(type)) {
-            toggleTaskType(true);
+            toggleTaskType(true, true);
         } else {
-            toggleTaskType(false);
+            toggleTaskType(false, true);
         }
 
         // Handle location data
         if (hasLocationData && location != null) {
-            String[] coords = location.split(",");
-            if (coords.length == 2) {
-                try {
-                    selectedLat = Double.parseDouble(coords[0]);
-                    selectedLng = Double.parseDouble(coords[1]);
-                    hasLocation = true;
-                } catch (NumberFormatException e) {
-                    Log.e("AddTaskActivity", "Error parsing location coordinates", e);
-                }
-            }
+            handleLocationData(location);
         }
 
         // Parse dates for calendar objects
@@ -180,30 +263,54 @@ public class AddTaskActivity extends AppCompatActivity {
         boolean hasLocationData = intent.getBooleanExtra("hasLocation", false);
         String location = intent.getStringExtra("location");
 
-        // Set task type
+        // Set task type with animation
         if ("priority".equals(type)) {
-            toggleTaskType(true);
+            toggleTaskType(true, true);
         } else {
-            toggleTaskType(false);
+            toggleTaskType(false, true);
         }
 
         // Handle location data
         if (hasLocationData && location != null) {
-            String[] coords = location.split(",");
-            if (coords.length == 2) {
-                try {
-                    selectedLat = Double.parseDouble(coords[0]);
-                    selectedLng = Double.parseDouble(coords[1]);
-                    hasLocation = true;
-                } catch (NumberFormatException e) {
-                    Log.e("AddTaskActivity", "Error parsing location coordinates", e);
-                }
-            }
+            handleLocationData(location);
         }
 
         // Set today's date as start date and tomorrow as end date for duplicated task
         calendarStart.setTimeInMillis(System.currentTimeMillis());
         calendarEnd.setTimeInMillis(System.currentTimeMillis() + 24 * 60 * 60 * 1000);
+    }
+
+    private void handleLocationData(String location) {
+        String[] coords = location.split(",");
+        if (coords.length == 2) {
+            try {
+                selectedLat = Double.parseDouble(coords[0]);
+                selectedLng = Double.parseDouble(coords[1]);
+                hasLocation = true;
+                updateLocationButton();
+            } catch (NumberFormatException e) {
+                Log.e("AddTaskActivity", "Error parsing location coordinates", e);
+            }
+        }
+    }
+
+    private void updateLocationButton() {
+        if (hasLocation) {
+            btnLocation.setText("Location Added ✓");
+            btnLocation.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_location_on_24));
+            btnLocation.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.blue_light));
+            btnLocation.setTextColor(ContextCompat.getColor(this, R.color.blue));
+            btnLocation.setStrokeColor(ContextCompat.getColorStateList(this, R.color.blue));
+
+            // Add subtle animation
+            animateLocationButton();
+        } else {
+            btnLocation.setText("Add Location");
+            btnLocation.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_add_location_24));
+            btnLocation.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.location_button_background));
+            btnLocation.setTextColor(ContextCompat.getColor(this, R.color.blue));
+            btnLocation.setStrokeColor(ContextCompat.getColorStateList(this, R.color.blue));
+        }
     }
 
     private void parseDatesFromStrings(String startDate, String endDate) {
@@ -227,36 +334,29 @@ public class AddTaskActivity extends AppCompatActivity {
     }
 
     private void updateUIForCreateMode() {
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Create New Task");
-        }
+        toolbar.setTitle("Create New Task");
         btnCreate.setText("Create Task");
+        btnCreate.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_check_24));
     }
 
     private void updateUIForEditMode() {
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Edit Task");
-        }
+        toolbar.setTitle("Edit Task");
         btnCreate.setText("Update Task");
+        btnCreate.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_check_24));
     }
 
     private void updateUIForDuplicateMode() {
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Duplicate Task");
-        }
+        toolbar.setTitle("Duplicate Task");
         btnCreate.setText("Create Copy");
+        btnCreate.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_check_24));
     }
 
-    private void initializeViews() {
-        inputTitle = findViewById(R.id.inputTitle);
-        inputDescription = findViewById(R.id.inputDescription);
-        inputStartDate = findViewById(R.id.inputStartDate);
-        inputEndDate = findViewById(R.id.inputEndDate);
-        btnPriority = findViewById(R.id.btnPriority);
-        btnDaily = findViewById(R.id.btnDaily);
-        btnCreate = findViewById(R.id.btnCreate);
-        geofencingClient = LocationServices.getGeofencingClient(this);
-        geofenceHelper = new GeofenceHelper(this);
+    private void initializeDates() {
+        // Set default dates if in create mode
+        if ("create".equals(editMode)) {
+            calendarStart.setTimeInMillis(System.currentTimeMillis());
+            calendarEnd.setTimeInMillis(System.currentTimeMillis() + 24 * 60 * 60 * 1000);
+        }
     }
 
     private void setupLocationPicker() {
@@ -274,17 +374,71 @@ public class AddTaskActivity extends AppCompatActivity {
         selectedLat = data.getDoubleExtra("lat", 0.0);
         selectedLng = data.getDoubleExtra("lng", 0.0);
         hasLocation = true;
-        Toast.makeText(this, "Location updated: " + selectedLat + ", " + selectedLng, Toast.LENGTH_SHORT).show();
+        updateLocationButton();
+        showLocationSuccessMessage();
+    }
+
+    private void showLocationSuccessMessage() {
+        Toast toast = Toast.makeText(this,
+                "Location added successfully! You'll get reminders when you arrive.",
+                Toast.LENGTH_LONG);
+        toast.show();
     }
 
     @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
     private void setupButtonListeners() {
-        findViewById(R.id.btnLocation).setOnClickListener(v -> launchMapPicker());
-        btnCreate.setOnClickListener(v -> saveTask());
-        btnPriority.setOnClickListener(v -> toggleTaskType(true));
-        btnDaily.setOnClickListener(v -> toggleTaskType(false));
+        btnLocation.setOnClickListener(v -> {
+            if (hasLocation) {
+                // Show options to edit or remove location
+                showLocationOptions();
+            } else {
+                launchMapPicker();
+            }
+        });
+
+        btnCreate.setOnClickListener(v -> {
+            if (isFormValid) {
+                animateButtonPress();
+                saveTask();
+            } else {
+                showValidationError();
+            }
+        });
+
+        btnPriority.setOnClickListener(v -> toggleTaskType(true, true));
+        btnDaily.setOnClickListener(v -> toggleTaskType(false, true));
+
         inputStartDate.setOnClickListener(v -> showDatePicker(true));
         inputEndDate.setOnClickListener(v -> showDatePicker(false));
+    }
+
+    private void showLocationOptions() {
+        // Create options dialog for editing or removing location
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Location Options")
+                .setMessage("Current location has been set. What would you like to do?")
+                .setPositiveButton("Edit Location", (dialog, which) -> launchMapPicker())
+                .setNegativeButton("Remove Location", (dialog, which) -> removeLocation())
+                .setNeutralButton("Cancel", null)
+                .show();
+    }
+
+    private void removeLocation() {
+        hasLocation = false;
+        selectedLat = 0.0;
+        selectedLng = 0.0;
+        updateLocationButton();
+        Toast.makeText(this, "Location removed", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showValidationError() {
+        if (inputTitle.getText().toString().trim().isEmpty()) {
+            inputTitle.requestFocus();
+            titleInputLayout.setError("Please enter a task title");
+
+            // Shake animation for the input field
+            animateShake(titleInputLayout);
+        }
     }
 
     private void launchMapPicker() {
@@ -305,11 +459,11 @@ public class AddTaskActivity extends AppCompatActivity {
     private void saveTask() {
         String title = inputTitle.getText().toString().trim();
         if (title.isEmpty()) {
-            showToast("Please enter task title");
+            showValidationError();
             return;
         }
 
-        showLoading(true);
+        showSavingState(true);
 
         if ("edit".equals(editMode) && editTaskId != null) {
             updateExistingTask();
@@ -632,11 +786,19 @@ public class AddTaskActivity extends AppCompatActivity {
     }
 
     private void handleSaveSuccess() {
-        showLoading(false);
+        showSavingState(false);
         String message = "edit".equals(editMode) ? "Task updated successfully" : "Task saved successfully";
-        showToast(message);
-        setResult(RESULT_OK);
-        finish();
+
+        // Show success animation
+        btnCreate.setText("Success!");
+        btnCreate.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_check_24));
+
+        new Handler().postDelayed(() -> {
+            setResult(RESULT_OK);
+            animateExit();
+        }, 1000);
+
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     private void handleSaveError(Exception e) {
@@ -754,13 +916,175 @@ public class AddTaskActivity extends AppCompatActivity {
         return taskData;
     }
 
-    private void toggleTaskType(boolean prioritySelected) {
+    private void toggleTaskType(boolean prioritySelected, boolean animate) {
         isPriority = prioritySelected;
 
-        btnPriority.setBackgroundTintList(getColorStateList(prioritySelected ? R.color.blue : R.color.gray_300));
-        btnDaily.setBackgroundTintList(getColorStateList(prioritySelected ? R.color.gray_300 : R.color.blue));
-        btnPriority.setTextColor(getColor(prioritySelected ? android.R.color.white : android.R.color.black));
-        btnDaily.setTextColor(getColor(prioritySelected ? android.R.color.black : android.R.color.white));
+        if (animate) {
+            animateTaskTypeToggle(prioritySelected);
+        } else {
+            updateTaskTypeButtons(prioritySelected);
+        }
+    }
+
+    private void updateTaskTypeButtons(boolean prioritySelected) {
+        // Update Priority button
+        btnPriority.setBackgroundTintList(ContextCompat.getColorStateList(this,
+                prioritySelected ? R.color.priority_color : R.color.priority_color_inactive));
+        btnPriority.setTextColor(ContextCompat.getColor(this,
+                prioritySelected ? android.R.color.white : R.color.text_secondary));
+
+        // Update Daily button
+        btnDaily.setBackgroundTintList(ContextCompat.getColorStateList(this,
+                prioritySelected ? R.color.daily_color_inactive : R.color.daily_color));
+        btnDaily.setTextColor(ContextCompat.getColor(this,
+                prioritySelected ? R.color.text_secondary : android.R.color.white));
+    }
+
+    // Animation Methods
+    private void setupInitialAnimations() {
+        // Animate cards sliding in from bottom
+        View[] cards = {
+                findViewById(R.id.titleCard),
+                findViewById(R.id.dateCard),
+                findViewById(R.id.categoryCard),
+                findViewById(R.id.locationCard),
+                findViewById(R.id.descriptionCard)
+        };
+
+        for (int i = 0; i < cards.length; i++) {
+            View card = cards[i];
+            card.setTranslationY(100f);
+            card.setAlpha(0f);
+
+            card.animate()
+                    .translationY(0f)
+                    .alpha(1f)
+                    .setDuration(300)
+                    .setStartDelay(i * 50)
+                    .setInterpolator(new AccelerateDecelerateInterpolator())
+                    .start();
+        }
+
+        // Animate FAB
+        btnCreate.setTranslationY(200f);
+        btnCreate.setAlpha(0f);
+        btnCreate.animate()
+                .translationY(0f)
+                .alpha(isFormValid ? 1.0f : 0.6f)
+                .setDuration(400)
+                .setStartDelay(300)
+                .setInterpolator(new AccelerateDecelerateInterpolator())
+                .start();
+    }
+
+    private void animateFab() {
+        float targetAlpha = isFormValid ? 1.0f : 0.6f;
+        ObjectAnimator alphaAnimator = ObjectAnimator.ofFloat(btnCreate, "alpha", targetAlpha);
+        alphaAnimator.setDuration(200);
+        alphaAnimator.start();
+
+        if (isFormValid) {
+            // Subtle scale animation when becoming valid
+            btnCreate.animate()
+                    .scaleX(1.05f)
+                    .scaleY(1.05f)
+                    .setDuration(100)
+                    .withEndAction(() -> {
+                        btnCreate.animate()
+                                .scaleX(1.0f)
+                                .scaleY(1.0f)
+                                .setDuration(100)
+                                .start();
+                    })
+                    .start();
+        }
+    }
+
+    private void animateTaskTypeToggle(boolean prioritySelected) {
+        // Scale animation for selected button
+        MaterialButton selectedButton = prioritySelected ? btnPriority : btnDaily;
+        MaterialButton unselectedButton = prioritySelected ? btnDaily : btnPriority;
+
+        selectedButton.animate()
+                .scaleX(1.05f)
+                .scaleY(1.05f)
+                .setDuration(100)
+                .withEndAction(() -> {
+                    updateTaskTypeButtons(prioritySelected);
+                    selectedButton.animate()
+                            .scaleX(1.0f)
+                            .scaleY(1.0f)
+                            .setDuration(100)
+                            .start();
+                })
+                .start();
+    }
+
+    private void animateLocationButton() {
+        btnLocation.animate()
+                .scaleX(0.95f)
+                .scaleY(0.95f)
+                .setDuration(100)
+                .withEndAction(() -> {
+                    btnLocation.animate()
+                            .scaleX(1.0f)
+                            .scaleY(1.0f)
+                            .setDuration(100)
+                            .start();
+                })
+                .start();
+    }
+
+    private void animateButtonPress() {
+        btnCreate.animate()
+                .scaleX(0.95f)
+                .scaleY(0.95f)
+                .setDuration(100)
+                .withEndAction(() -> {
+                    btnCreate.animate()
+                            .scaleX(1.0f)
+                            .scaleY(1.0f)
+                            .setDuration(100)
+                            .start();
+                })
+                .start();
+    }
+
+    private void animateShake(View view) {
+        ObjectAnimator animator = ObjectAnimator.ofFloat(view, "translationX", 0f, -10f, 10f, -5f, 5f, 0f);
+        animator.setDuration(400);
+        animator.start();
+    }
+
+    private void animateExit() {
+        finish();
+        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+    }
+
+    private void showSavingState(boolean saving) {
+        btnCreate.setEnabled(!saving);
+        if (saving) {
+            btnCreate.setText("Saving...");
+            btnCreate.setIcon(null);
+        } else {
+            switch (editMode) {
+                case "edit":
+                    btnCreate.setText("Update Task");
+                    break;
+                case "duplicate":
+                    btnCreate.setText("Create Copy");
+                    break;
+                default:
+                    btnCreate.setText("Create Task");
+                    break;
+            }
+            btnCreate.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_check_24));
+        }
+    }
+
+    private void showLocationServiceWarning() {
+        Toast.makeText(this, "Location features disabled - Google Play Services required",
+                Toast.LENGTH_LONG).show();
     }
 
     private void showDatePicker(boolean isStart) {

@@ -1,0 +1,33 @@
+<resources>
+    <!-- Spacing -->
+    <dimen name="margin_tiny">4dp</dimen>
+    <dimen name="margin_small">8dp</dimen>
+    <dimen name="margin_medium">16dp</dimen>
+    <dimen name="margin_large">24dp</dimen>
+    <dimen name="margin_xlarge">32dp</dimen>
+
+    <!-- Card dimensions -->
+    <dimen name="card_corner_radius">16dp</dimen>
+    <dimen name="card_elevation">2dp</dimen>
+    <dimen name="card_padding">20dp</dimen>
+
+    <!-- Button dimensions -->
+    <dimen name="button_corner_radius">16dp</dimen>
+    <dimen name="button_height">56dp</dimen>
+    <dimen name="button_elevation">4dp</dimen>
+
+    <!-- Input field dimensions -->
+    <dimen name="input_corner_radius">12dp</dimen>
+    <dimen name="input_min_height">56dp</dimen>
+
+    <!-- FAB dimensions -->
+    <dimen name="fab_margin">24dp</dimen>
+    <dimen name="fab_elevation">8dp</dimen>
+
+    <!-- Text sizes -->
+    <dimen name="text_size_heading">24sp</dimen>
+    <dimen name="text_size_title">18sp</dimen>
+    <dimen name="text_size_body">16sp</dimen>
+    <dimen name="text_size_caption">14sp</dimen>
+    <dimen name="text_size_small">12sp</dimen>
+</resources>
