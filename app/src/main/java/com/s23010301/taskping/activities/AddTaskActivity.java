@@ -18,6 +18,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresPermission;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -58,7 +59,7 @@ public class AddTaskActivity extends AppCompatActivity {
     private double selectedLng = 0.0;
     private boolean hasLocation = false;
     private EditText inputTitle, inputDescription, inputStartDate, inputEndDate;
-    private MaterialButton btnPriority, btnDaily;
+    private MaterialButton btnPriority, btnDaily, btnCreate;
     private boolean isPriority = true;
     private final Calendar calendarStart = Calendar.getInstance();
     private final Calendar calendarEnd = Calendar.getInstance();
@@ -66,15 +67,25 @@ public class AddTaskActivity extends AppCompatActivity {
     private static final int MAX_GEOFENCE_RETRIES = 3;
     private int geofenceRetryCount = 0;
 
+    // Edit mode variables
+    private String editMode = "create"; // "create", "edit", or "duplicate"
+    private String editTaskId = null;
+    private Task currentTask = null;
+
     @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_task);
 
+        setupToolbar();
         initializeViews();
         setupLocationPicker();
         setupButtonListeners();
+
+        // Handle different modes (create, edit, duplicate)
+        handleIntentExtras();
+
         updateDateFields();
 
         // Check Google Play Services first
@@ -88,6 +99,154 @@ public class AddTaskActivity extends AppCompatActivity {
         checkAllPermissions();
     }
 
+    private void setupToolbar() {
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        if (toolbar != null) {
+            setSupportActionBar(toolbar);
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+                getSupportActionBar().setDisplayShowHomeEnabled(true);
+            }
+            toolbar.setNavigationOnClickListener(v -> finish());
+        }
+    }
+
+    private void handleIntentExtras() {
+        Intent intent = getIntent();
+        editMode = intent.getStringExtra("mode");
+        if (editMode == null) editMode = "create";
+
+        switch (editMode) {
+            case "edit":
+                editTaskId = intent.getStringExtra("taskId");
+                loadTaskForEditing(intent);
+                updateUIForEditMode();
+                break;
+            case "duplicate":
+                loadTaskForDuplicating(intent);
+                updateUIForDuplicateMode();
+                break;
+            default:
+                updateUIForCreateMode();
+                break;
+        }
+    }
+
+    private void loadTaskForEditing(Intent intent) {
+        editTaskId = intent.getStringExtra("taskId");
+        inputTitle.setText(intent.getStringExtra("title"));
+        inputDescription.setText(intent.getStringExtra("description"));
+
+        String startDate = intent.getStringExtra("startDate");
+        String endDate = intent.getStringExtra("endDate");
+        String type = intent.getStringExtra("type");
+        boolean hasLocationData = intent.getBooleanExtra("hasLocation", false);
+        String location = intent.getStringExtra("location");
+
+        if (startDate != null) inputStartDate.setText(startDate);
+        if (endDate != null) inputEndDate.setText(endDate);
+
+        // Set task type
+        if ("priority".equals(type)) {
+            toggleTaskType(true);
+        } else {
+            toggleTaskType(false);
+        }
+
+        // Handle location data
+        if (hasLocationData && location != null) {
+            String[] coords = location.split(",");
+            if (coords.length == 2) {
+                try {
+                    selectedLat = Double.parseDouble(coords[0]);
+                    selectedLng = Double.parseDouble(coords[1]);
+                    hasLocation = true;
+                } catch (NumberFormatException e) {
+                    Log.e("AddTaskActivity", "Error parsing location coordinates", e);
+                }
+            }
+        }
+
+        // Parse dates for calendar objects
+        parseDatesFromStrings(startDate, endDate);
+    }
+
+    private void loadTaskForDuplicating(Intent intent) {
+        // Similar to edit but don't set the task ID
+        inputTitle.setText(intent.getStringExtra("title"));
+        inputDescription.setText(intent.getStringExtra("description"));
+
+        String type = intent.getStringExtra("type");
+        boolean hasLocationData = intent.getBooleanExtra("hasLocation", false);
+        String location = intent.getStringExtra("location");
+
+        // Set task type
+        if ("priority".equals(type)) {
+            toggleTaskType(true);
+        } else {
+            toggleTaskType(false);
+        }
+
+        // Handle location data
+        if (hasLocationData && location != null) {
+            String[] coords = location.split(",");
+            if (coords.length == 2) {
+                try {
+                    selectedLat = Double.parseDouble(coords[0]);
+                    selectedLng = Double.parseDouble(coords[1]);
+                    hasLocation = true;
+                } catch (NumberFormatException e) {
+                    Log.e("AddTaskActivity", "Error parsing location coordinates", e);
+                }
+            }
+        }
+
+        // Set today's date as start date and tomorrow as end date for duplicated task
+        calendarStart.setTimeInMillis(System.currentTimeMillis());
+        calendarEnd.setTimeInMillis(System.currentTimeMillis() + 24 * 60 * 60 * 1000);
+    }
+
+    private void parseDatesFromStrings(String startDate, String endDate) {
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
+
+        if (startDate != null) {
+            try {
+                calendarStart.setTime(sdf.parse(startDate));
+            } catch (ParseException e) {
+                Log.e("AddTaskActivity", "Error parsing start date", e);
+            }
+        }
+
+        if (endDate != null) {
+            try {
+                calendarEnd.setTime(sdf.parse(endDate));
+            } catch (ParseException e) {
+                Log.e("AddTaskActivity", "Error parsing end date", e);
+            }
+        }
+    }
+
+    private void updateUIForCreateMode() {
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("Create New Task");
+        }
+        btnCreate.setText("Create Task");
+    }
+
+    private void updateUIForEditMode() {
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("Edit Task");
+        }
+        btnCreate.setText("Update Task");
+    }
+
+    private void updateUIForDuplicateMode() {
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("Duplicate Task");
+        }
+        btnCreate.setText("Create Copy");
+    }
+
     private void initializeViews() {
         inputTitle = findViewById(R.id.inputTitle);
         inputDescription = findViewById(R.id.inputDescription);
@@ -95,6 +254,7 @@ public class AddTaskActivity extends AppCompatActivity {
         inputEndDate = findViewById(R.id.inputEndDate);
         btnPriority = findViewById(R.id.btnPriority);
         btnDaily = findViewById(R.id.btnDaily);
+        btnCreate = findViewById(R.id.btnCreate);
         geofencingClient = LocationServices.getGeofencingClient(this);
         geofenceHelper = new GeofenceHelper(this);
     }
@@ -114,13 +274,13 @@ public class AddTaskActivity extends AppCompatActivity {
         selectedLat = data.getDoubleExtra("lat", 0.0);
         selectedLng = data.getDoubleExtra("lng", 0.0);
         hasLocation = true;
-        Toast.makeText(this, "Picked: " + selectedLat + ", " + selectedLng, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Location updated: " + selectedLat + ", " + selectedLng, Toast.LENGTH_SHORT).show();
     }
 
     @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
     private void setupButtonListeners() {
         findViewById(R.id.btnLocation).setOnClickListener(v -> launchMapPicker());
-        findViewById(R.id.btnCreate).setOnClickListener(v -> saveTask());
+        btnCreate.setOnClickListener(v -> saveTask());
         btnPriority.setOnClickListener(v -> toggleTaskType(true));
         btnDaily.setOnClickListener(v -> toggleTaskType(false));
         inputStartDate.setOnClickListener(v -> showDatePicker(true));
@@ -129,6 +289,10 @@ public class AddTaskActivity extends AppCompatActivity {
 
     private void launchMapPicker() {
         Intent intent = new Intent(this, MapPickerActivity.class);
+        if (hasLocation) {
+            intent.putExtra("currentLat", selectedLat);
+            intent.putExtra("currentLng", selectedLng);
+        }
         locationPickerLauncher.launch(intent);
     }
 
@@ -147,7 +311,16 @@ public class AddTaskActivity extends AppCompatActivity {
 
         showLoading(true);
 
-        Map<String, Object> taskData = createTaskData(title);
+        if ("edit".equals(editMode) && editTaskId != null) {
+            updateExistingTask();
+        } else {
+            createNewTask();
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    private void createNewTask() {
+        Map<String, Object> taskData = createTaskData(inputTitle.getText().toString().trim());
 
         FirestoreHelper.saveTask(taskData,
                 unused -> {
@@ -188,6 +361,68 @@ public class AddTaskActivity extends AppCompatActivity {
                     handleSaveError(e);
                 }
         );
+    }
+
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    private void updateExistingTask() {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("title", inputTitle.getText().toString().trim());
+        updates.put("description", inputDescription.getText().toString().trim());
+        updates.put("type", isPriority ? "priority" : "daily");
+        updates.put("startDate", inputStartDate.getText().toString());
+        updates.put("endDate", inputEndDate.getText().toString());
+        updates.put("hasLocation", hasLocation);
+        updates.put("lastUpdated", FieldValue.serverTimestamp());
+
+        if (hasLocation) {
+            updates.put("location", selectedLat + "," + selectedLng);
+        } else {
+            updates.put("location", null);
+        }
+
+        FirestoreHelper.updateTask(editTaskId, updates,
+                unused -> {
+                    // Update local cache
+                    LocalCacheHelper cache = LocalCacheHelper.getInstance(AddTaskActivity.this);
+                    // You'll need to implement updateTask method in LocalCacheHelper
+                    // or retrieve and update the existing task
+
+                    // Handle geofencing updates
+                    if (hasLocation) {
+                        addGeofenceWithRetry(
+                                editTaskId,
+                                selectedLat,
+                                selectedLng,
+                                this::handleUpdateSuccess,
+                                this::handleGeofenceError
+                        );
+                    } else {
+                        // Remove existing geofence if location was removed
+                        removeGeofenceForTask(editTaskId);
+                        handleUpdateSuccess();
+                    }
+                },
+                e -> {
+                    showLoading(false);
+                    handleSaveError(e);
+                }
+        );
+    }
+
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    private void removeGeofenceForTask(String taskId) {
+        if (geofenceHelper != null) {
+            geofencingClient.removeGeofences(Collections.singletonList(taskId))
+                    .addOnSuccessListener(unused -> Log.d("AddTaskActivity", "Geofence removed for task: " + taskId))
+                    .addOnFailureListener(e -> Log.e("AddTaskActivity", "Failed to remove geofence", e));
+        }
+    }
+
+    private void handleUpdateSuccess() {
+        showLoading(false);
+        showToast("Task updated successfully");
+        setResult(RESULT_OK);
+        finish();
     }
 
     private void scheduleTaskReminder(Map<String, Object> taskData) {
@@ -279,7 +514,6 @@ public class AddTaskActivity extends AppCompatActivity {
                     handleGeofenceFailure(taskId, lat, lng, onSuccess, onFailure, e);
                 });
     }
-
 
     private boolean checkGooglePlayServices() {
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
@@ -399,7 +633,8 @@ public class AddTaskActivity extends AppCompatActivity {
 
     private void handleSaveSuccess() {
         showLoading(false);
-        showToast("Task saved successfully");
+        String message = "edit".equals(editMode) ? "Task updated successfully" : "Task saved successfully";
+        showToast(message);
         setResult(RESULT_OK);
         finish();
     }
@@ -461,7 +696,22 @@ public class AddTaskActivity extends AppCompatActivity {
     }
 
     private void showLoading(boolean isLoading) {
-        findViewById(R.id.btnCreate).setEnabled(!isLoading);
+        btnCreate.setEnabled(!isLoading);
+        if (isLoading) {
+            btnCreate.setText("Saving...");
+        } else {
+            switch (editMode) {
+                case "edit":
+                    btnCreate.setText("Update Task");
+                    break;
+                case "duplicate":
+                    btnCreate.setText("Create Copy");
+                    break;
+                default:
+                    btnCreate.setText("Create Task");
+                    break;
+            }
+        }
     }
 
     private void showToast(String message) {
@@ -470,7 +720,7 @@ public class AddTaskActivity extends AppCompatActivity {
 
     private Map<String, Object> createTaskData(String title) {
         Map<String, Object> taskData = new HashMap<>();
-        String taskId = UUID.randomUUID().toString();
+        String taskId = editMode.equals("edit") && editTaskId != null ? editTaskId : UUID.randomUUID().toString();
 
         String formattedDate = DateUtils.formatDate(calendarStart, "MMM dd, yyyy");
 
@@ -486,11 +736,19 @@ public class AddTaskActivity extends AppCompatActivity {
         taskData.put("endDate", inputEndDate.getText().toString());
         taskData.put("done", false);
         taskData.put("date", formattedDate);
-        taskData.put("createdAt", FieldValue.serverTimestamp());
+
+        if (editMode.equals("edit")) {
+            taskData.put("lastUpdated", FieldValue.serverTimestamp());
+        } else {
+            taskData.put("createdAt", FieldValue.serverTimestamp());
+        }
+
         taskData.put("hasLocation", hasLocation);
 
         if (hasLocation) {
             taskData.put("location", selectedLat + "," + selectedLng);
+        } else {
+            taskData.put("location", null);
         }
 
         return taskData;
@@ -591,5 +849,12 @@ public class AddTaskActivity extends AppCompatActivity {
         return locationManager != null &&
                 (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                         locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER));
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        // Add exit animation
+        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
     }
 }

@@ -1,8 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="RadioCheckboxTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
-        <item name="android:button">@drawable/custom_radio_checkbox</item>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Base application theme -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight">
+        <item name="colorPrimary">@color/blue</item>
+        <item name="colorPrimaryVariant">@color/blue_dark</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+
+        <item name="colorSecondary">@color/orange</item>
+        <item name="colorSecondaryVariant">@color/orange_dark</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+
+        <item name="android:colorBackground">@color/background_light</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+
+        <item name="colorSurface">@color/background_white</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+
+        <item name="android:statusBarColor">@color/blue</item>
+        <item name="android:navigationBarColor">@color/background_white</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
     </style>
+
+    <!-- Task Details Activity Theme -->
+    <style name="AppTheme.TaskDetails" parent="AppTheme">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- Text Styles -->
+    <style name="ExpandedTitleText" parent="@android:style/TextAppearance">
+        <item name="android:textSize">24sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="CardTitleStyle">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="CardContentStyle">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+    </style>
+
+    <style name="SectionHeaderStyle">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.1</item>
+    </style>
+
+    <!-- Card Styles -->
+    <style name="EnhancedCardStyle" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">4dp</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="cardBackgroundColor">@color/background_white</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <style name="StatsCard" parent="android:Widget">
+        <item name="android:background">@drawable/custom_card_background</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:elevation">2dp</item>
+    </style>
+
+    <!-- Button Styles -->
+    <style name="PrimaryButtonStyle" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/blue</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textStyle">bold</item>
+        <item name="cornerRadius">12dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="OutlineButtonStyle" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/blue</item>
+        <item name="android:textColor">@color/blue</item>
+        <item name="cornerRadius">20dp</item>
+        <item name="android:minHeight">36dp</item>
+    </style>
+
+    <style name="RoundedButton" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/rounded_button_background</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:elevation">4dp</item>
+        <item name="cornerRadius">24dp</item>
+    </style>
+
+    <!-- FAB Styles -->
+    <style name="CustomFABStyle" parent="Widget.Material3.FloatingActionButton.Primary">
+        <item name="backgroundTint">@android:color/white</item>
+        <item name="tint">@color/blue</item>
+        <item name="elevation">6dp</item>
+        <item name="hoveredFocusedTranslationZ">8dp</item>
+        <item name="pressedTranslationZ">10dp</item>
+    </style>
+
+    <style name="CustomExtendedFABStyle" parent="Widget.Material3.ExtendedFloatingActionButton.Primary">
+        <item name="backgroundTint">@color/blue</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textStyle">bold</item>
+        <item name="iconTint">@android:color/white</item>
+        <item name="cornerRadius">28dp</item>
+        <item name="elevation">8dp</item>
+    </style>
+
+    <!-- Chip Style -->
+    <style name="CustomChipStyle" parent="Widget.Material3.Chip.Assist">
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textStyle">bold</item>
+        <item name="chipIconTint">@android:color/white</item>
+        <item name="chipCornerRadius">16dp</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- Progress Indicator Style -->
+    <style name="CustomProgressStyle" parent="Widget.Material3.LinearProgressIndicator">
+        <item name="indicatorColor">@color/blue</item>
+        <item name="trackColor">@color/blue_light</item>
+        <item name="trackCornerRadius">4dp</item>
+        <item name="android:layout_height">8dp</item>
+    </style>
+
+    <!-- Navigation Styles -->
     <style name="BottomNavigationStyle" parent="Widget.Design.BottomNavigationView">
         <item name="android:layout_height">56dp</item>
         <item name="android:layout_width">match_parent</item>
@@ -13,7 +146,33 @@
         <item name="labelVisibilityMode">labeled</item>
     </style>
 
-    <!-- Custom Alert Dialog Style -->
+    <!-- Quick Action Item Style -->
+    <style name="QuickActionStyle">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- Toolbar Styles -->
+    <style name="CustomToolbarStyle" parent="Widget.Material3.Toolbar">
+        <item name="android:theme">@style/ThemeOverlay.Material3.Dark.ActionBar</item>
+        <item name="popupTheme">@style/ThemeOverlay.Material3.Light</item>
+        <item name="titleTextAppearance">@style/Toolbar.TitleText</item>
+    </style>
+
+    <style name="Toolbar.TitleText" parent="TextAppearance.Material3.ActionBar.Title">
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Dialog Styles -->
     <style name="CustomAlertDialog" parent="Theme.Material3.DayNight.Dialog.Alert">
         <item name="android:windowBackground">@drawable/dialog_background</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
@@ -26,20 +185,9 @@
         <item name="android:textStyle">bold</item>
     </style>
 
-    <!-- Custom Button Style -->
-    <style name="RoundedButton" parent="Widget.Material3.Button">
-        <item name="android:background">@drawable/rounded_button_background</item>
-        <item name="android:textColor">@android:color/white</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:elevation">4dp</item>
-        <item name="cornerRadius">24dp</item>
-    </style>
-
-    <!-- Card Style -->
-    <style name="StatsCard" parent="android:Widget">
-        <item name="android:background">@drawable/custom_card_background</item>
-        <item name="android:layout_margin">4dp</item>
-        <item name="android:elevation">2dp</item>
+    <!-- Radio/Checkbox Theme -->
+    <style name="RadioCheckboxTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="android:button">@drawable/custom_radio_checkbox</item>
     </style>
 
 </resources>
