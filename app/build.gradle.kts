@@ -80,5 +80,6 @@ dependencies {
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.play.services.location.v2101)
     implementation(libs.places.v330)
+    implementation(libs.material.vlatestversion)
 
 }
