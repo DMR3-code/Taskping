@@ -33,6 +33,10 @@ import com.s23010301.taskping.models.PriorityTask;
 import com.s23010301.taskping.models.Task;
 import com.s23010301.taskping.models.TaskViewModel;
 import com.s23010301.taskping.utils.DateUtils;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,6 +78,12 @@ public class MainActivity extends BaseActivity {
     private int totalPendingTasks = 0;
     private int totalPriorityTasks = 0;
 
+    private BroadcastReceiver taskCompletionReceiver;
+    private static final String ACTION_TASK_COMPLETED = "com.s23010301.taskping.TASK_COMPLETED";
+    private static final String ACTION_TASK_UNCOMPLETED = "com.s23010301.taskping.TASK_UNCOMPLETED";
+    private static final String EXTRA_TASK_ID = "task_id";
+    private static final String EXTRA_TASK_TYPE = "task_type";
+
     // Animation handler
     private Handler animationHandler = new Handler(Looper.getMainLooper());
 
@@ -94,6 +104,8 @@ public class MainActivity extends BaseActivity {
         // Load initial data
         loadUserData();
         setupNotificationSystem();
+        setupTaskCompletionReceiver();
+
 
         // Create notification channel
         NotificationHelper.createNotificationChannel(this);
@@ -307,6 +319,110 @@ public class MainActivity extends BaseActivity {
         } catch (Exception e) {
             showErrorToast("Error setting up notifications: " + e.getMessage());
         }
+    }
+
+    private void setupTaskCompletionReceiver() {
+        taskCompletionReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                String taskId = intent.getStringExtra(EXTRA_TASK_ID);
+                String taskType = intent.getStringExtra(EXTRA_TASK_TYPE);
+
+                if (ACTION_TASK_COMPLETED.equals(action)) {
+                    handleTaskCompleted(taskId, taskType);
+                } else if (ACTION_TASK_UNCOMPLETED.equals(action)) {
+                    handleTaskUncompleted(taskId, taskType);
+                }
+            }
+        };
+
+        // Register receiver
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_TASK_COMPLETED);
+        filter.addAction(ACTION_TASK_UNCOMPLETED);
+        LocalBroadcastManager.getInstance(this).registerReceiver(taskCompletionReceiver, filter);
+    }
+
+    private void handleTaskCompleted(String taskId, String taskType) {
+        // Update local counters immediately for smooth UI
+        if ("daily".equals(taskType)) {
+            totalCompletedTasks++;
+            totalPendingTasks = Math.max(0, totalPendingTasks - 1);
+
+            // Update the daily task in the list
+            updateDailyTaskCompletion(taskId, true);
+        }
+
+        // Update UI with animation
+        updateStats(totalCompletedTasks, totalPendingTasks, totalPriorityTasks);
+
+        // Show celebration effect
+        showTaskCompletionCelebration();
+
+        // Refresh data from repository to ensure consistency
+        refreshTaskData();
+    }
+
+    private void handleTaskUncompleted(String taskId, String taskType) {
+        // Update local counters
+        if ("daily".equals(taskType)) {
+            totalCompletedTasks = Math.max(0, totalCompletedTasks - 1);
+            totalPendingTasks++;
+
+            // Update the daily task in the list
+            updateDailyTaskCompletion(taskId, false);
+        }
+
+        // Update UI
+        updateStats(totalCompletedTasks, totalPendingTasks, totalPriorityTasks);
+
+        // Refresh data from repository
+        refreshTaskData();
+    }
+
+    private void updateDailyTaskCompletion(String taskId, boolean isCompleted) {
+        for (DailyTask task : dailyTasks) {
+            if (taskId.equals(String.valueOf(task.getId()))) {
+                task.setDone(isCompleted);
+                break;
+            }
+        }
+
+        // Notify adapter of changes
+        if (dailyAdapter != null) {
+            dailyAdapter.notifyDataSetChanged();
+        }
+    }
+
+    private void showTaskCompletionCelebration() {
+        // Add a subtle celebration animation
+        View completedCounter = findViewById(R.id.completedTasksCount);
+        if (completedCounter != null) {
+            completedCounter.animate()
+                    .scaleX(1.2f)
+                    .scaleY(1.2f)
+                    .setDuration(200)
+                    .withEndAction(() -> {
+                        completedCounter.animate()
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(200)
+                                .start();
+                    })
+                    .start();
+        }
+    }
+
+    private void refreshTaskData() {
+        // Delay refresh slightly to allow Firestore to sync
+        animationHandler.postDelayed(() -> {
+            String today = DateUtils.getCurrentDate("MMM dd, yyyy");
+            if (repository != null) {
+                repository.refreshTasksFromFirestore("daily", today);
+                repository.refreshTasksFromFirestore("priority", today);
+            }
+        }, 500);
     }
 
     private void updateNotificationBadge(Integer count) {
@@ -779,6 +895,11 @@ public class MainActivity extends BaseActivity {
         super.onDestroy();
 
         try {
+            // Unregister broadcast receiver
+            if (taskCompletionReceiver != null) {
+                LocalBroadcastManager.getInstance(this).unregisterReceiver(taskCompletionReceiver);
+            }
+
             // Clean up animations
             View contentContainer = findViewById(R.id.content_container);
             if (contentContainer != null) {

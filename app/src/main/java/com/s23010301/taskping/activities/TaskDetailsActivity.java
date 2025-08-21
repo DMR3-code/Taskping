@@ -1,4 +1,3 @@
-
 package com.s23010301.taskping.activities;
 
 import android.content.DialogInterface;
@@ -11,6 +10,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.LocationServices;
@@ -37,6 +37,12 @@ public class TaskDetailsActivity extends AppCompatActivity {
     private MaterialButton btnDone;
     private LocalCacheHelper localCache;
     private boolean isTaskDone = false;
+
+    // Constants for broadcast actions
+    private static final String ACTION_TASK_COMPLETED = "com.s23010301.taskping.TASK_COMPLETED";
+    private static final String ACTION_TASK_UNCOMPLETED = "com.s23010301.taskping.TASK_UNCOMPLETED";
+    private static final String EXTRA_TASK_ID = "task_id";
+    private static final String EXTRA_TASK_TYPE = "task_type";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -129,12 +135,29 @@ public class TaskDetailsActivity extends AppCompatActivity {
     }
 
     private void showCompletionConfirmation(String taskId) {
-        new AlertDialog.Builder(this)
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        AlertDialog dialog = builder
                 .setTitle("Mark as Done?")
                 .setMessage("Are you sure you want to mark this task as completed?")
-                .setPositiveButton("Yes", (dialog, which) -> markTaskAsDone(taskId))
+                .setPositiveButton("Yes", (dialogInterface, which) -> markTaskAsDone(taskId))
                 .setNegativeButton("Cancel", null)
-                .show();
+                .create();
+
+        // Fix button visibility issues
+        dialog.setOnShowListener(dialogInterface -> {
+            try {
+                if (dialog.getButton(AlertDialog.BUTTON_POSITIVE) != null) {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(0xFF2196F3);
+                }
+                if (dialog.getButton(AlertDialog.BUTTON_NEGATIVE) != null) {
+                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(0xFF757575);
+                }
+            } catch (Exception e) {
+                // Use default styling
+            }
+        });
+
+        dialog.show();
     }
 
     private void markTaskAsDone(String taskId) {
@@ -152,6 +175,7 @@ public class TaskDetailsActivity extends AppCompatActivity {
         Map<String, Object> updates = new HashMap<>();
         updates.put("done", true);
         updates.put("completedAt", FieldValue.serverTimestamp());
+        updates.put("lastUpdated", FieldValue.serverTimestamp());
 
         FirestoreHelper.updateTask(taskId, updates,
                 unused -> {
@@ -163,7 +187,11 @@ public class TaskDetailsActivity extends AppCompatActivity {
                     // Cancel any reminders for this task
                     cancelTaskReminders(taskId);
 
-                    Toast.makeText(this, "Task marked as done!", Toast.LENGTH_SHORT).show();
+                    // Broadcast task completion to update MainActivity stats
+                    broadcastTaskCompletion(taskId, currentTask != null ? currentTask.getType() : "daily");
+
+                    // Show success message with celebration
+                    showCompletionSuccess();
                 },
                 e -> {
                     // Error - revert local changes
@@ -195,6 +223,7 @@ public class TaskDetailsActivity extends AppCompatActivity {
         Map<String, Object> updates = new HashMap<>();
         updates.put("done", false);
         updates.put("completedAt", null);
+        updates.put("lastUpdated", FieldValue.serverTimestamp());
 
         FirestoreHelper.updateTask(taskId, updates,
                 unused -> {
@@ -205,6 +234,9 @@ public class TaskDetailsActivity extends AppCompatActivity {
 
                     // Re-schedule reminders if needed
                     rescheduleTaskReminders(taskId);
+
+                    // Broadcast task uncompletion to update MainActivity stats
+                    broadcastTaskUncompletion(taskId, currentTask != null ? currentTask.getType() : "daily");
 
                     Toast.makeText(this, "Task marked as undone!", Toast.LENGTH_SHORT).show();
                 },
@@ -221,6 +253,39 @@ public class TaskDetailsActivity extends AppCompatActivity {
                     Toast.makeText(this, "Failed to update task. Please try again.", Toast.LENGTH_SHORT).show();
                 }
         );
+    }
+
+    private void broadcastTaskCompletion(String taskId, String taskType) {
+        Intent intent = new Intent(ACTION_TASK_COMPLETED);
+        intent.putExtra(EXTRA_TASK_ID, taskId);
+        intent.putExtra(EXTRA_TASK_TYPE, taskType);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+
+    private void broadcastTaskUncompletion(String taskId, String taskType) {
+        Intent intent = new Intent(ACTION_TASK_UNCOMPLETED);
+        intent.putExtra(EXTRA_TASK_ID, taskId);
+        intent.putExtra(EXTRA_TASK_TYPE, taskType);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+
+    private void showCompletionSuccess() {
+        // Show a celebration toast with emoji
+        Toast.makeText(this, "🎉 Task completed! Great job!", Toast.LENGTH_LONG).show();
+
+        // Optional: You could add animation here
+        btnDone.animate()
+                .scaleX(1.1f)
+                .scaleY(1.1f)
+                .setDuration(100)
+                .withEndAction(() -> {
+                    btnDone.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .setDuration(100)
+                            .start();
+                })
+                .start();
     }
 
     private void cancelTaskReminders(String taskId) {
@@ -252,7 +317,7 @@ public class TaskDetailsActivity extends AppCompatActivity {
         }
     }
 
-    // Your existing helper methods (formatDate, getRemainingText) remain here
+    // Helper methods for date formatting and remaining time calculation
     private String formatDate(String dateStr, String inputPattern, String outputPattern) {
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat(inputPattern, Locale.getDefault());
@@ -291,5 +356,12 @@ public class TaskDetailsActivity extends AppCompatActivity {
         } catch (ParseException e) {
             return "Unknown deadline";
         }
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        // Add exit animation
+        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
     }
 }
